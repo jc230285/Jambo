@@ -64,15 +64,11 @@ end
 function UI:Init()
     if frame then return end
     
-    -- Ensure config is hidden by default
-    if NS.db.options.showConfig == nil then NS.db.options.showConfig = false end
-    
     frame = CreateFrame("Frame", "JamboTargetFrame", UIParent, "BackdropTemplate")
     frame:SetSize(C.FRAME_WIDTH, 600)
     SkinFrame(frame)
     local savedPos = NS.db.options.targetFrameOffset
-    if savedPos then frame:SetPoint("CENTER", UIParent, "CENTER", savedPos.x, savedPos.y)
-    else frame:SetPoint("CENTER", UIParent, "CENTER", -700, 125) end
+    frame:SetPoint("CENTER", UIParent, "CENTER", savedPos.x, savedPos.y)
     frame:SetMovable(true); frame:EnableMouse(true); frame:RegisterForDrag("LeftButton")
     frame:SetScript("OnDragStart", frame.StartMoving)
     frame:SetScript("OnDragStop", function(self) 

@@ -32,8 +32,8 @@ C.DEFAULTS = {
         targetDeficitHP = 0,
         targetHealSpellId = nil,
         targetHarmSpellId = nil,
-        targetFrameOffset = { x = 0, y = 0 },
-        showConfig = true, -- Toggle state
+        targetFrameOffset = { x = -700, y = 125 },
+        showConfig = false, -- Toggle state
         enemySortMode = C.SORT_HP_ASC, -- Default sort
     },
     data = {},
