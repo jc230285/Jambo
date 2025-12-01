@@ -184,7 +184,7 @@ local function Init()
     if db.point then
         dataSquare:SetPoint(db.point, UIParent, db.relativePoint, db.x, db.y)
     else
-        dataSquare:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+        dataSquare:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 6, -1)
     end
 
     dataSquare:SetSize(db.size, db.size)
@@ -195,7 +195,7 @@ local function Init()
     dataSquare:SetFrameStrata("TOOLTIP")
     dataSquare:SetFrameLevel(9999)
     
-    dataSquare:SetScript("OnDragStart", dataSquare.StartMoving)
+    dataSquare:SetScript("OnDragStart", function(self) print("DataSquare drag start"); dataSquare.StartMoving(self) end)
     dataSquare:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
         local point, _, relativePoint, x, y = self:GetPoint()
@@ -205,6 +205,7 @@ local function Init()
         JamboDataSquareDB.x = x
         JamboDataSquareDB.y = y
         print("DataSquare moved to: " .. point .. " anchored to " .. relativePoint .. " at " .. x .. ", " .. y)
+        DEFAULT_CHAT_FRAME:AddMessage("DataSquare moved to: " .. point .. " anchored to " .. relativePoint .. " at " .. x .. ", " .. y)
     end)
     
     dataSquare:RegisterForClicks("AnyUp")
