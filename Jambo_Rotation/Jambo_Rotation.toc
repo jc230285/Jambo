@@ -1,0 +1,14 @@
+## Interface: 11508
+## Title: Jambo Rotation
+## Notes: Modular rotation builder with advanced conditions.
+## Author: Jambo
+## Version: 2.2
+## SavedVariables: JamboRotationDB
+## Dependencies: Jambo_Spells
+
+Core.lua
+Conditions\Combat.lua
+Conditions\SpellReady.lua
+UI.lua
+ConditionEditor.lua
+Minimap.lua

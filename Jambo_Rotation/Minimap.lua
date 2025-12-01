@@ -1,59 +1,32 @@
 local ADDON, NS = ...
-
--- NS.UI may not be initialized when this file is loaded; resolve lazily
-local function GetUI()
-    return NS and NS.UI
-end
-
 local function CreateMinimapButton()
-    if _G["JamboRotMinimapButton"] then return end
-
-    local btn = CreateFrame("Button", "JamboRotMinimapButton", Minimap)
+    local btn = CreateFrame("Button", "JamboRotationMinimap", Minimap)
     btn:SetSize(32, 32)
-    btn:SetFrameStrata("HIGH")
-
-    local icon = btn:CreateTexture(nil, "BACKGROUND")
-    icon:SetAllPoints()
-    icon:SetTexture("Interface\\Icons\\Ability_Repair")
-
-    local angle = 160
-    local radius = 80
-
-    local function UpdatePos()
-        local x = math.cos(math.rad(angle)) * radius
-        local y = math.sin(math.rad(angle)) * radius
-        btn:SetPoint("CENTER", Minimap, "CENTER", x, y)
-    end
-
-    btn:SetScript("OnClick", function()
-        local ui = GetUI()
-        if ui and ui.Toggle then ui:Toggle() end
-    end)
-
+    btn:SetFrameStrata("MEDIUM")
+    btn:SetFrameLevel(8)
+    btn:SetPoint("CENTER", -20, -80)
+    btn:SetNormalTexture("Interface\\Icons\\Ability_Repair")
+    btn:GetNormalTexture():SetTexCoord(0.1, 0.9, 0.1, 0.9)
+    local border = btn:CreateTexture(nil, "OVERLAY")
+    border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+    border:SetSize(54, 54)
+    border:SetPoint("TOPLEFT", 0, 0)
+    btn:SetMovable(true)
     btn:RegisterForDrag("LeftButton")
     btn:SetScript("OnDragStart", function(self)
         self:SetScript("OnUpdate", function()
-            local mx,my = Minimap:GetCenter()
-            local cx,cy = GetCursorPosition()
+            local x,y = GetCursorPosition()
             local s = Minimap:GetEffectiveScale()
-            cx,cy = cx/s, cy/s
-            angle = math.deg(math.atan2(cy - my, cx - mx))
-            UpdatePos()
+            local mx,my = Minimap:GetCenter()
+            local a = math.atan2((y/s)-my, (x/s)-mx)
+            self:SetPoint("CENTER", Minimap, "CENTER", 80*math.cos(a), 80*math.sin(a))
         end)
     end)
-
-    btn:SetScript("OnDragStop", function(self)
-        self:SetScript("OnUpdate", nil)
-        UpdatePos()
-    end)
-
-    UpdatePos()
+    btn:SetScript("OnDragStop", function(self) self:SetScript("OnUpdate", nil) end)
+    btn:SetScript("OnClick", function() NS.UI:Toggle() end)
 end
-
-CreateMinimapButton()
-
-SLASH_JAMBOROT1 = "/jamrot"
-SlashCmdList["JAMBOROT"] = function()
-    local ui = GetUI()
-    if ui and ui.Toggle then ui:Toggle() end
-end
+local f = CreateFrame("Frame")
+f:RegisterEvent("PLAYER_LOGIN")
+f:SetScript("OnEvent", CreateMinimapButton)
+SLASH_JAMBOROT1 = "/jr"
+SlashCmdList["JAMBOROT"] = function() NS.UI:Toggle() end

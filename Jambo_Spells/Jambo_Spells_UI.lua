@@ -9,13 +9,14 @@ function J:InitUI()
     if J.frame then return end
     
     local f = CreateFrame("Frame", "JamboSpellsFrame", UIParent, "BackdropTemplate")
-    f:SetSize(650, 500)
+    f:SetSize(950, 500)
     f:SetPoint("CENTER")
     f:SetMovable(true)
     f:EnableMouse(true)
     f:RegisterForDrag("LeftButton")
     f:SetScript("OnDragStart", f.StartMoving)
     f:SetScript("OnDragStop", f.StopMovingOrSizing)
+    f:SetToplevel(true)
     
     f:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8x8", 
@@ -26,44 +27,33 @@ function J:InitUI()
     f:SetBackdropColor(0.1, 0.1, 0.1, 0.95)
     f:SetBackdropBorderColor(0, 0, 0, 1)
     
-    -- Header
     f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     f.title:SetPoint("TOP", 0, -8)
-    f.title:SetText("Jambo Spells")
+    f.title:SetText("Jambo Spells V3")
     
     local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
     close:SetPoint("TOPRIGHT", -2, -2)
     
-    -- Refresh
     local refresh = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     refresh:SetSize(80, 22)
     refresh:SetPoint("TOPLEFT", 10, -10)
     refresh:SetText("Refresh")
-    refresh:SetScript("OnClick", function() J:ScanSpells(); J:ScanBags() end)
+    refresh:SetScript("OnClick", function() if J.FullScan then J:FullScan() end end)
     
-    -- Export
     local export = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     export:SetSize(80, 22)
     export:SetPoint("LEFT", refresh, "RIGHT", 5, 0)
     export:SetText("Export JSON")
-    export:SetScript("OnClick", function() J:ExportData() end)
+    export:SetScript("OnClick", function() if J.ExportData then J:ExportData() end end)
 
-    -- NEW: Square Debug Button
-    local debugBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    debugBtn:SetSize(100, 22)
-    debugBtn:SetPoint("LEFT", export, "RIGHT", 5, 0)
-    debugBtn:SetText("Square Debug")
-    debugBtn:SetScript("OnClick", function() 
-        if J.ToggleDataDebug then J:ToggleDataDebug() end 
-    end)
-
-    -- Headers
     local headers = {
-        {name="Name", width=200, key="NAME"},
-        {name="HPS", width=60, key="HPS"},
-        {name="HPM", width=60, key="HPM"},
-        {name="DPS", width=60, key="DPS"},
-        {name="DPM", width=60, key="DPM"},
+        {name="Name / Details", width=450, key="NAME"},
+        {name="Heal", width=50, key="HEAL_TOTAL"},
+        {name="Dmg", width=50, key="DMG_TOTAL"},
+        {name="HPS", width=50, key="HPS"},
+        {name="HPM", width=50, key="HPM"},
+        {name="DPS", width=50, key="DPS"},
+        {name="DPM", width=50, key="DPM"},
     }
     
     local x = 10
@@ -79,7 +69,6 @@ function J:InitUI()
         x = x + h.width + 2
     end
     
-    -- Scroll Frame
     local scroll = CreateFrame("ScrollFrame", "JamboSpellsScroll", f, "FauxScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", 10, -70)
     scroll:SetPoint("BOTTOMRIGHT", -30, 10)
@@ -88,7 +77,6 @@ function J:InitUI()
     end)
     J.scrollFrame = scroll
     
-    -- Rows
     J.rows = {}
     for i = 1, MAX_ROWS do
         local row = CreateFrame("Button", nil, f)
@@ -98,38 +86,31 @@ function J:InitUI()
         
         row.text = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         row.text:SetPoint("LEFT", 5, 0)
-        row.text:SetWidth(200)
+        row.text:SetWidth(450)
         row.text:SetJustifyH("LEFT")
         
         row.stats = {}
-        local statX = 205
-        for j=1, 4 do
+        local statX = 460
+        for j=1, 6 do 
             local fs = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
             fs:SetPoint("LEFT", statX, 0)
-            fs:SetWidth(60)
+            fs:SetWidth(50)
             fs:SetJustifyH("RIGHT")
             table.insert(row.stats, fs)
-            statX = statX + 62
+            statX = statX + 52
         end
         
         row:SetScript("OnEnter", function(self)
             if not self.data then return end
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
             GameTooltip:AddLine(self.data.NAME)
-            GameTooltip:AddLine(self.data.DESCRIPTION, 1, 1, 1, true)
-            GameTooltip:AddDoubleLine("Cast Time:", string.format("%.1fs", self.data.CAST_TIME))
-            GameTooltip:AddDoubleLine("Mana:", self.data.COST)
-            GameTooltip:AddDoubleLine("Range:", self.data.RANGE.."yd")
-            GameTooltip:AddLine(" ")
-            GameTooltip:AddDoubleLine("Total Heal:", self.data.HEAL_TOTAL)
-            GameTooltip:AddDoubleLine("Total Dmg:", self.data.DMG_TOTAL)
+            if self.data.DESC then GameTooltip:AddLine(self.data.DESC, 1, 1, 1, true) end
             GameTooltip:Show()
         end)
         row:SetScript("OnLeave", function() GameTooltip:Hide() end)
         
         J.rows[i] = row
     end
-    
     J.frame = f
     f:Hide()
 end
@@ -142,19 +123,7 @@ end
 function J:RefreshUI()
     if not J.frame or not J.frame:IsShown() then return end
     
-    local data = {}
-    local maxRanks = {}
-    for _, s in ipairs(J.data.spells) do
-        if not maxRanks[s.NAME] or s.RANK > maxRanks[s.NAME].RANK then
-            maxRanks[s.NAME] = s
-        end
-    end
-    
-    for _, s in ipairs(J.data.spells) do
-        if maxRanks[s.NAME] and s.RANK == maxRanks[s.NAME].RANK then
-            table.insert(data, s)
-        end
-    end
+    local data = J.data.spells or {}
     
     table.sort(data, function(a,b)
         local v1, v2 = a[SORT_KEY] or 0, b[SORT_KEY] or 0
@@ -170,15 +139,40 @@ function J:RefreshUI()
             local info = data[idx]
             row.data = info
             row:Show()
-            row.text:SetText(string.format("%s (R%d)", info.NAME, info.RANK))
-            row.stats[1]:SetText(string.format("%.1f", info.HPS))
-            row.stats[2]:SetText(string.format("%.1f", info.HPM))
-            row.stats[3]:SetText(string.format("%.1f", info.DPS))
-            row.stats[4]:SetText(string.format("%.1f", info.DPM))
+            
+            local color = "|cffffffff"
+            if info.KNOWN == false then color = "|cff808080"
+            elseif info.TYPE == "ITEM" then color = "|cff00ff00" 
+            elseif info.TYPE == "MACRO" then color = "|cff00aaff" end
+            
+            -- FORMAT: {NAME} (R{RANK} L{Level}) [{ID}] [{slotid}] [{range}] [{mana}]
+            local cRank = "|cffffff00" -- Yellow
+            local cID = "|cff666666"   -- Grey
+            local cSlot = "|cff00ff00" -- Green
+            local cRange = "|cffffaa00"-- Orange
+            local cMana = "|cff00ffff" -- Cyan
+            
+            local slotStr = (info.SLOT > 0) and (cSlot .. "["..info.SLOT.."]|r ") or ""
+            local rangeStr = (info.RANGE and info.RANGE > 0) and (cRange .. "["..info.RANGE.."y]|r ") or ""
+            local costStr = (info.COST and info.COST > 0) and (cMana .. "["..info.COST.."]|r ") or ""
+            local rankStr = cRank .. "(R"..info.RANK.." L"..info.LEVEL..")|r"
+            local idStr = cID .. "["..info.ID.."]|r"
+            
+            local txt = string.format("%s%s|r %s %s%s%s%s", 
+                color, info.NAME, rankStr, idStr, slotStr, rangeStr, costStr)
+            
+            row.text:SetText(txt)
+            
+            row.stats[1]:SetText(math.floor(info.HEAL_TOTAL))
+            row.stats[2]:SetText(math.floor(info.DMG_TOTAL))
+            row.stats[3]:SetText(string.format("%.1f", info.HPS))
+            row.stats[4]:SetText(string.format("%.1f", info.HPM))
+            row.stats[5]:SetText(string.format("%.1f", info.DPS))
+            row.stats[6]:SetText(string.format("%.1f", info.DPM))
         else
             row:Hide()
         end
     end
-    
     FauxScrollFrame_Update(J.scrollFrame, #data, MAX_ROWS, ROW_HEIGHT)
 end
+-- Timestamp: 2023-12-04 10:05:00

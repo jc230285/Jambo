@@ -1,88 +1,185 @@
 local addonName, J = ...
 
--- Tooltip scanner
 local tooltip = CreateFrame("GameTooltip", "JamboScanTooltip", nil, "GameTooltipTemplate")
 tooltip:SetOwner(UIParent, "ANCHOR_NONE")
 
-local function GetSpellTooltipData(id)
+local function GetTooltipStats(link_or_id, isItem)
     tooltip:ClearLines()
-    tooltip:SetSpellByID(id)
-    local desc = (JamboScanTooltipTextLeft2 and JamboScanTooltipTextLeft2:GetText()) or ""
+    if isItem then tooltip:SetHyperlink(link_or_id)
+    else tooltip:SetSpellByID(link_or_id) end
     
-    local heal = 0
-    local dmg = 0
+    local heal, dmg = 0, 0
     
-    -- Parse Tooltip Text
-    local h1, h2 = string.match(desc, "Heals.-for (%d+).-to (%d+)")
-    if not h1 then h1 = string.match(desc, "Heals.-for (%d+)") end
-    
-    local d1, d2 = string.match(desc, "Deals.-(%d+).-to (%d+)")
-    if not d1 then d1 = string.match(desc, "Deals.-(%d+)") end
-    if not d1 then d1 = string.match(desc, "(%d+) .- damage") end
-    
-    if h1 then heal = h2 and (tonumber(h1)+tonumber(h2))/2 or tonumber(h1) end
-    if d1 then dmg = d2 and (tonumber(d1)+tonumber(d2))/2 or tonumber(d1) end
-    
-    return desc, heal, dmg
-end
+    for i = 1, tooltip:NumLines() do
+        local line = _G["JamboScanTooltipTextLeft"..i]
+        if line then
+            local text = line:GetText() or ""
+            
+            -- Healing Regex
+            local h1, h2 = text:match("Heals.-for (%d+).-to (%d+)")
+            if not h1 then h1 = text:match("Heals.-for (%d+)") end
+            if not h1 then h1 = text:match("Restores (%d+)") end
+            
+            if h1 then 
+                heal = h2 and (tonumber(h1)+tonumber(h2))/2 or tonumber(h1) 
+                break 
+            end
 
-function J:ScanSpells()
-    local spells = {}
-    
-    for i = 1, GetNumSpellTabs() do
-        local _, _, offset, numSpells = GetSpellTabInfo(i)
-        for j = offset + 1, offset + numSpells do
-            local type, id = GetSpellBookItemInfo(j, "spell")
-            if type == "SPELL" and id then
-                local name, rankText = GetSpellInfo(id)
-                local rank = tonumber(string.match(rankText or "", "(%d+)")) or 1
-                
-                local dbData = J.classData.spells[id] or {}
-                local desc, scrapeHeal, scrapeDmg = GetSpellTooltipData(id)
-                
-                -- Cost
-                local cost = dbData.cost or 0
-                if cost == 0 then
-                    local costs = GetSpellPowerCost(id)
-                    if costs and costs[1] then cost = costs[1].cost end
-                end
-                
-                -- Cast Time (default to 1.5 if instant/missing to avoid div by zero)
-                local castTime = dbData.castTime or 0
-                if castTime == 0 then
-                    local _, _, _, castMS = GetSpellInfo(id)
-                    castTime = (castMS or 0) / 1000
-                    if castTime == 0 then castTime = 1.5 end 
-                end
-                
-                -- Heal/Dmg Values
-                local heal = dbData.HEAL_TOTAL or 0
-                if heal == 0 then heal = scrapeHeal end
-                
-                local dmg = dbData.DMG_TOTAL or 0
-                if dmg == 0 then dmg = scrapeDmg end
-                
-                -- Calculations
-                local hps = (castTime > 0) and (heal / castTime) or 0
-                local dps = (castTime > 0) and (dmg / castTime) or 0
-                local hpm = (cost > 0) and (heal / cost) or 0
-                local dpm = (cost > 0) and (dmg / cost) or 0
-
-                local entry = {
-                    TYPE = "SPELL", NAME = name, SPELLID = id, RANK = rank,
-                    LEVEL = dbData.levelReq or 0, DESCRIPTION = desc,
-                    COST = cost, CAST_TIME = castTime, RANGE = dbData.range or 0,
-                    TAGS = dbData.tags or {},
-                    
-                    HEAL_TOTAL = heal, DMG_TOTAL = dmg,
-                    HPS = hps, HPM = hpm, DPS = dps, DPM = dpm,
-                }
-                
-                table.insert(spells, entry)
+            -- Damage Regex
+            local d1, d2 = text:match("Deals.-(%d+).-to (%d+)")
+            if not d1 then d1 = text:match("Deals.-(%d+)") end
+            if not d1 then d1 = text:match("(%d+) .- damage") end
+            
+            if d1 then 
+                dmg = d2 and (tonumber(d1)+tonumber(d2))/2 or tonumber(d1) 
+                break
             end
         end
     end
     
-    J.data.spells = spells
-    if J.RefreshUI then J:RefreshUI() end
+    local desc = (JamboScanTooltipTextLeft2 and JamboScanTooltipTextLeft2:GetText()) or ""
+    return desc, heal, dmg
 end
+
+local function FindSlotForSpell(spellID)
+    for slot = 1, 120 do
+        local type, id = GetActionInfo(slot)
+        if type == "spell" and id == spellID then return slot end
+    end
+    return 0
+end
+
+function J:FullScan()
+    local masterList = {}
+    local seenIDs = {}
+    
+    -- 1. CLASS DB SCAN
+    if J.classData and J.classData.spells then
+        for id, dbData in pairs(J.classData.spells) do
+            local name, rankText, icon, castTimeMS, minRange, maxRange = GetSpellInfo(id)
+            
+            if name then
+                seenIDs[id] = true
+                local known = IsSpellKnown(id)
+                local slot = FindSlotForSpell(id)
+                
+                -- Rank Logic: DB Calc > API Text > 1
+                local rank = dbData.rank
+                if not rank or rank == 0 then
+                    if rankText and rankText ~= "" then
+                        rank = tonumber(string.match(rankText, "(%d+)"))
+                    end
+                end
+                if not rank or rank == 0 then rank = 1 end
+                
+                local desc, sHeal, sDmg = GetTooltipStats(id, false)
+                
+                -- Cost
+                local cost = 0
+                if known then
+                    local costs = GetSpellPowerCost(id)
+                    if costs and costs[1] then cost = costs[1].cost end
+                end
+                if cost == 0 then cost = dbData.cost or 0 end
+
+                -- Cast Time
+                local castSec = (castTimeMS or 0) / 1000
+                if castSec == 0 then castSec = 1.5 end
+                
+                -- Stats
+                local heal = (sHeal > 0) and sHeal or (dbData.HEAL_TOTAL or 0)
+                local dmg = (sDmg > 0) and sDmg or (dbData.DMG_TOTAL or 0)
+                
+                table.insert(masterList, {
+                    TYPE = "SPELL", NAME = name, ID = id, RANK = rank, LEVEL = dbData.levelReq or 0,
+                    DESC = desc, COST = cost, CAST = castSec, RANGE = maxRange or 0, SLOT = slot, KNOWN = known,
+                    HEAL_TOTAL = heal, DMG_TOTAL = dmg,
+                    HPS = (castSec > 0 and heal/castSec or 0), 
+                    HPM = (cost > 0 and heal/cost or 0),
+                    DPS = (castSec > 0 and dmg/castSec or 0),
+                    DPM = (cost > 0 and dmg/cost or 0)
+                })
+            end
+        end
+    end
+
+    -- 2. SPELLBOOK SCAN (Extras)
+    for i = 1, GetNumSpellTabs() do
+        local _, _, offset, num = GetSpellTabInfo(i)
+        for j = offset + 1, offset + num do
+            local type, id = GetSpellBookItemInfo(j, "spell")
+            if type == "SPELL" and id and not seenIDs[id] then
+                local name, rankText = GetSpellInfo(id)
+                
+                local rank = 1
+                if rankText and rankText ~= "" then
+                    rank = tonumber(string.match(rankText, "(%d+)")) or 1
+                end
+                
+                local desc, heal, dmg = GetTooltipStats(id, false)
+                local slot = FindSlotForSpell(id)
+                
+                local costs = GetSpellPowerCost(id)
+                local cost = (costs and costs[1]) and costs[1].cost or 0
+                
+                local _, _, _, castMS, _, maxRange = GetSpellInfo(id)
+                local cast = (castMS or 0) / 1000
+                if cast == 0 then cast = 1.5 end
+                
+                table.insert(masterList, {
+                    TYPE = "SPELL", NAME = name, ID = id, RANK = rank, LEVEL = 0,
+                    DESC = desc, COST = cost, CAST = cast, RANGE = maxRange or 0, SLOT = slot, KNOWN = true,
+                    HEAL_TOTAL = heal, DMG_TOTAL = dmg,
+                    HPS = heal/cast, HPM = (cost>0 and heal/cost or 0),
+                    DPS = dmg/cast, DPM = (cost>0 and dmg/cost or 0)
+                })
+                seenIDs[id] = true
+            end
+        end
+    end
+    
+    -- 3. ITEMS
+    local seenItems = {}
+    for bag = 0, 4 do
+        for slot = 1, C_Container.GetContainerNumSlots(bag) do
+            local info = C_Container.GetContainerItemInfo(bag, slot)
+            if info then
+                local id = info.itemID
+                if not seenItems[id] then
+                    seenItems[id] = true
+                    local name, link = GetItemInfo(id)
+                    local spellName, spellID = GetItemSpell(id)
+                    if spellID then
+                        local desc, heal, dmg = GetTooltipStats(link, true)
+                        table.insert(masterList, {
+                            TYPE = "ITEM", NAME = name, ID = id, RANK = 1, LEVEL = 0,
+                            DESC = desc, COST = 0, CAST = 0, RANGE = 0, SLOT = 0, KNOWN = true,
+                            HEAL_TOTAL = heal, DMG_TOTAL = dmg,
+                            HPS = heal, HPM = 0, DPS = dmg, DPM = 0
+                        })
+                    end
+                end
+            end
+        end
+    end
+
+    -- 4. MACROS
+    local numGlobal, numChar = GetNumMacros()
+    for i = 1, numGlobal + numChar do
+        local name, icon, body = GetMacroInfo(i)
+        if name then
+            table.insert(masterList, {
+                TYPE = "MACRO", NAME = name, ID = i, RANK = 1, LEVEL = 0,
+                DESC = body, COST = 0, CAST = 0, RANGE = 0, SLOT = 0, KNOWN = true,
+                HEAL_TOTAL = 0, DMG_TOTAL = 0, HPS = 0, HPM = 0, DPS = 0, DPM = 0
+            })
+        end
+    end
+
+    J.data.spells = masterList
+    if J.SaveCache then J:SaveCache() end
+    if J.RefreshUI then J:RefreshUI() end
+    
+    if J.ScanBagsForMacros then J:ScanBagsForMacros() end
+end
+-- Timestamp: 2023-12-04 10:05:00

@@ -1,8 +1,8 @@
 ## Interface: 11508
 ## Title: Jambo Spells V3
-## Notes: Spell rankings, macros, and Data Square integration.
+## Notes: Spell rankings, action bar scan, export, and UI
 ## Author: Jambo
-## SavedVariables: JamboSpellsDB, JamboDataSquareDB
+## SavedVariables: JamboSpellsDB
 
 Jambo_Spells.lua
 Jambo_Spells_Util.lua
