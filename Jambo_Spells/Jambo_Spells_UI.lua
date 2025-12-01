@@ -1,5 +1,8 @@
 local addonName, J = ...
 
+JamboSpellsDB = JamboSpellsDB or {}
+local db = JamboSpellsDB
+
 local ROW_HEIGHT = 24
 local MAX_ROWS = 15
 local SORT_KEY = "HPS"
@@ -10,14 +13,24 @@ function J:InitUI()
     
     local f = CreateFrame("Frame", "JamboSpellsFrame", UIParent, "BackdropTemplate")
     f:SetSize(950, 500)
-    f:SetPoint("CENTER")
+    if db.point then
+        f:SetPoint(db.point, UIParent, db.relativePoint, db.x, db.y)
+    else
+        f:SetPoint("CENTER")
+    end
     f:SetMovable(true)
     f:EnableMouse(true)
     f:SetScript("OnDragStart", f.StartMoving)
     f:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
         local point, relativeTo, relativePoint, xOfs, yOfs = self:GetPoint()
+        -- Save to DB
+        db.point = point
+        db.relativePoint = relativePoint
+        db.x = xOfs
+        db.y = yOfs
         print("JamboSpellsFrame moved to: " .. point .. " anchored to " .. (relativeTo and relativeTo:GetName() or "UIParent") .. " at " .. relativePoint .. " with offset " .. xOfs .. ", " .. yOfs)
+        DEFAULT_CHAT_FRAME:AddMessage("JamboSpellsFrame moved to: " .. point .. " anchored to " .. (relativeTo and relativeTo:GetName() or "UIParent") .. " at " .. relativePoint .. " with offset " .. xOfs .. ", " .. yOfs)
     end)
     
     f:SetBackdrop({
