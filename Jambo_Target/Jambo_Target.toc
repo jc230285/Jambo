@@ -1,0 +1,13 @@
+## Interface: 11508
+## Title: |cff0099ffJambo|r Target V3
+## Notes: Modular, priority-based unit frames.
+## Author: Jambo
+## Version: 3.1
+## SavedVariables: JamboTargetDB
+
+Constants.lua
+Core.lua
+Spells.lua
+Groups.lua
+Rows.lua
+UI.lua

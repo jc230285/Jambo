@@ -1,0 +1,26 @@
+## Interface: 11508
+## Title: Jambo Spells V3
+## Notes: Spell rankings, macros, and Data Square integration.
+## Author: Jambo
+## SavedVariables: JamboSpellsDB, JamboDataSquareDB
+
+Jambo_Spells.lua
+Jambo_Spells_Util.lua
+Jambo_Spells_Scan.lua
+Jambo_Spells_Export.lua
+Jambo_Spells_Macros.lua
+Jambo_Spells_UI.lua
+Jambo_Spells_DataSquare.lua
+
+# Class Files
+Classes\Classic\Druid.lua
+Classes\Classic\Hunter.lua
+Classes\Classic\HunterPets.lua
+Classes\Classic\Mage.lua
+Classes\Classic\Paladin.lua
+Classes\Classic\Priest.lua
+Classes\Classic\Rogue.lua
+Classes\Classic\Shaman.lua
+Classes\Classic\Warlock.lua
+Classes\Classic\WarlockTomes.lua
+Classes\Classic\Warrior.lua

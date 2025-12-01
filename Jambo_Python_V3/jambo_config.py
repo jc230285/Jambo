@@ -1,0 +1,36 @@
+import json
+from pathlib import Path
+
+CONFIG_FILE = Path(__file__).parent / "square_config.json"
+POS_FILE = Path(__file__).parent / "square_pos.json"
+
+DEFAULT_CONFIG = {
+    "square_size": 50,
+    "cell_size": 10,
+    "padding": 0,
+    "root_dir": r"C:\Program Files (x86)\World of Warcraft\_classic_era_",
+    "selected_account": "",
+    "selected_character": "",
+    "window_x": 50,
+    "window_y": 50,
+}
+
+def load():
+    cfg = DEFAULT_CONFIG.copy()
+    if CONFIG_FILE.exists():
+        try: cfg.update(json.loads(CONFIG_FILE.read_text()))
+        except: pass
+    return cfg
+
+def save(cfg):
+    CONFIG_FILE.write_text(json.dumps(cfg, indent=4))
+
+def load_pos():
+    if POS_FILE.exists():
+        try: return tuple(json.loads(POS_FILE.read_text())["pos"])
+        except: return None
+    return None
+
+def save_pos(pos):
+    POS_FILE.write_text(json.dumps({"pos": pos}))
+    return pos
