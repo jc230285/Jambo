@@ -72,7 +72,16 @@ function UI:Init()
     else frame:SetPoint("CENTER") end
     frame:SetMovable(true); frame:EnableMouse(true); frame:RegisterForDrag("LeftButton")
     frame:SetScript("OnDragStart", frame.StartMoving)
-    frame:SetScript("OnDragStop", function(self) self:StopMovingOrSizing(); local cx,cy = self:GetCenter(); local px,py = UIParent:GetCenter(); if cx then NS.db.options.targetFrameOffset={x=cx-px,y=cy-py} end end)
+    frame:SetScript("OnDragStop", function(self) 
+        self:StopMovingOrSizing()
+        local cx,cy = self:GetCenter()
+        local px,py = UIParent:GetCenter()
+        if cx then 
+            NS.db.options.targetFrameOffset={x=cx-px,y=cy-py}
+            print("JamboTargetFrame moved to: CENTER anchored to UIParent at CENTER with offset " .. (cx-px) .. ", " .. (cy-py))
+            DEFAULT_CHAT_FRAME:AddMessage("JamboTargetFrame moved to: CENTER anchored to UIParent at CENTER with offset " .. (cx-px) .. ", " .. (cy-py))
+        end
+    end)
     NS.UI.frame = frame
 
     -- Header & Toggle Button
