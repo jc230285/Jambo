@@ -3,8 +3,10 @@ local addonName, J = ...
 J.FullScan = J.ScanBagsForMacros
 
 function J:ScanBagsForMacros()
-    -- Logic to find lowest rank potions/food
+    -- Logic to find lowest rank potions/food/water
     local potions = { heal = {}, mana = {} }
+    local food = {}
+    local water = {}
     
     for bag = 0, 4 do
         for slot = 1, C_Container.GetContainerNumSlots(bag) do
@@ -14,10 +16,20 @@ function J:ScanBagsForMacros()
                 local name, _, _, _, minLevel, type, subType = GetItemInfo(id)
                 if name then
                     local lower = string.lower(name)
-                    if lower:find("healing potion") then 
-                        table.insert(potions.heal, {name=name, lvl=minLevel}) 
-                    elseif lower:find("mana potion") then 
-                        table.insert(potions.mana, {name=name, lvl=minLevel}) 
+                    if type == "Consumable" then
+                        if subType == "Potion" then
+                            if lower:find("healing") then 
+                                table.insert(potions.heal, {name=name, lvl=minLevel}) 
+                            elseif lower:find("mana") then 
+                                table.insert(potions.mana, {name=name, lvl=minLevel}) 
+                            end
+                        elseif subType == "Food & Drink" or subType == "Food" or subType == "Drink" then
+                            if lower:find("water") or lower:find("drink") or lower:find("beverage") then
+                                table.insert(water, {name=name, lvl=minLevel})
+                            else
+                                table.insert(food, {name=name, lvl=minLevel})
+                            end
+                        end
                     end
                 end
             end
@@ -27,12 +39,25 @@ function J:ScanBagsForMacros()
     local function sortLvl(a,b) return a.lvl < b.lvl end
     table.sort(potions.heal, sortLvl)
     table.sort(potions.mana, sortLvl)
+    table.sort(food, sortLvl)
+    table.sort(water, sortLvl)
     
     if #potions.heal > 0 then
         J:UpdateMacro("AutoHeal", "/use " .. potions.heal[1].name, "INV_Potion_51")
+        J:UpdateMacro("HPPotion", "/use " .. potions.heal[1].name, "134832")
     end
     if #potions.mana > 0 then
         J:UpdateMacro("AutoMana", "/use " .. potions.mana[1].name, "INV_Potion_76")
+        J:UpdateMacro("MPPotion", "/use " .. potions.mana[1].name, "134850")
+    end
+    if #food > 0 then
+        J:UpdateMacro("EatFood", "#showtooltip\n/use " .. food[1].name, "133972")
+    end
+    if #water > 0 then
+        J:UpdateMacro("DrinkWater", "#showtooltip\n/use " .. water[1].name, "132794")
+    end
+    if #food > 0 and #water > 0 then
+        J:UpdateMacro("Feast", "#showtooltip\n/use " .. food[1].name .. "\n/use " .. water[1].name, "132794")
     end
     
     J:CreateUtilityMacros()
