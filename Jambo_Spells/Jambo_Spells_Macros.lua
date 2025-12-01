@@ -1,5 +1,7 @@
 local addonName, J = ...
 
+J.FullScan = J.ScanBagsForMacros
+
 function J:ScanBagsForMacros()
     -- Logic to find lowest rank potions/food
     local potions = { heal = {}, mana = {} }
@@ -32,15 +34,33 @@ function J:ScanBagsForMacros()
     if #potions.mana > 0 then
         J:UpdateMacro("AutoMana", "/use " .. potions.mana[1].name, "INV_Potion_76")
     end
+    
+    J:CreateUtilityMacros()
 end
 
-function J:UpdateMacro(name, body, icon)
+function J:CreateUtilityMacros()
     if InCombatLockdown() then return end
-    local idx = GetMacroIndexByName(name)
-    if idx > 0 then
-        EditMacro(idx, name, icon, body)
-    else
-        local numGlobal = GetNumMacros()
-        if numGlobal < 120 then CreateMacro(name, icon, body, nil) end
+    
+    -- Create utility macros
+    local macros = {
+        {"DrinkWater", "#showtooltip item:159\n/use item:159", "132794"},
+        {"Feast", "#showtooltip item:117\n/use item:117\n/use item:159", "132794"},
+        {"EatFood", "#showtooltip item:117\n/use item:117", "133972"},
+        {"HPPotion", "#showtooltip item:1710\n/use item:1710", "134832"},
+        {"MPPotion", "#showtooltip item:2455\n/use item:2455", "134850"},
+        {"Break 10", "/dbm timer 600 10 Minute Break!\n/y 10 Minute Break!", "254288"},
+        {"Break 5", "/dbm timer 300 5 Minute Break!\n/y 5 Minute Break!", "132161"},
+        {"CycleEnemy", "#showtooltip\n/cleartarget [dead][noexists]\n/targetenemy [noexists][dead]", "INV_Misc_QuestionMark"},
+        {"CycleFriend", "#showtooltip\n/cleartarget [dead][noexists]\n/targetfriend [noharm]", "INV_Misc_QuestionMark"},
+        {"Reload", "/reload", "132096"},
+        {"Roll", "/roll", "252184"},
+        {"Shoot", "#showtooltip Shoot\n/castsequence [harm] reset=2 !Shoot, null\n/castsequence [help,target=targettarget] reset=2 !Shoot, null", "INV_MISC_QUESTIONMARK"},
+        {"Attack", "#showtooltip 16\n/cleartarget [dead]\n/startattack [harm,nodead]\n/targetenemy [noexists]", "INV_MISC_QUESTIONMARK"},
+        {"T1", "#showtooltip 13\n/use 13", "INV_MISC_QUESTIONMARK"},
+        {"T2", "#showtooltip 14\n/use 14", "INV_MISC_QUESTIONMARK"},
+    }
+    
+    for _, macro in ipairs(macros) do
+        J:UpdateMacro(macro[1], macro[2], macro[3])
     end
 end
