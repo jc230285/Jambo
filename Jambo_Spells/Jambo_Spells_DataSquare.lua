@@ -204,6 +204,7 @@ local function Init()
         JamboDataSquareDB.relativePoint = relativePoint
         JamboDataSquareDB.x = x
         JamboDataSquareDB.y = y
+        print("DataSquare moved to: " .. point .. " anchored to " .. relativePoint .. " at " .. x .. ", " .. y)
     end)
     
     dataSquare:RegisterForClicks("AnyUp")

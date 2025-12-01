@@ -13,10 +13,12 @@ function J:InitUI()
     f:SetPoint("CENTER")
     f:SetMovable(true)
     f:EnableMouse(true)
-    f:RegisterForDrag("LeftButton")
     f:SetScript("OnDragStart", f.StartMoving)
-    f:SetScript("OnDragStop", f.StopMovingOrSizing)
-    f:SetToplevel(true)
+    f:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        local point, relativeTo, relativePoint, xOfs, yOfs = self:GetPoint()
+        print("JamboSpellsFrame moved to: " .. point .. " anchored to " .. (relativeTo and relativeTo:GetName() or "UIParent") .. " at " .. relativePoint .. " with offset " .. xOfs .. ", " .. yOfs)
+    end)
     
     f:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8x8", 
