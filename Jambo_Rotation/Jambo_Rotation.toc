@@ -2,13 +2,18 @@
 ## Title: Jambo Rotation
 ## Notes: Modular rotation builder with advanced conditions.
 ## Author: Jambo
-## Version: 2.2
+## Version: 2.5
 ## SavedVariables: JamboRotationDB
 ## Dependencies: Jambo_Spells
 
 Core.lua
 Conditions\Combat.lua
 Conditions\SpellReady.lua
+Conditions\Aura.lua
+Conditions\Resource.lua
+Conditions\Unit.lua
+Conditions\Moving.lua
+Conditions\Group.lua
 UI.lua
 ConditionEditor.lua
 Minimap.lua

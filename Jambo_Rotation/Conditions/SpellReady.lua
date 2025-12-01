@@ -42,23 +42,15 @@ Rot:RegisterCondition("SPELL_READY", function(cond, step)
     -- C. Slot
     if cond.checkSlot then
         table.insert(checks, "S")
-        -- (Assuming existing logic implies slot exists if ID found)
     end
     
-    -- D. Cooldown Data
-    local start, duration = GetSpellCooldown(spellID)
-    if start > 0 then cdRemain = duration - (GetTime() - start) end
-    if cdRemain < 0 then cdRemain = 0 end
-
-    -- Check CD (Binary)
-    if cond.checkCD then
-        table.insert(checks, "CD")
-        if isReady and cdRemain > 1.5 then isReady = false end
-    end
-    
-    -- Check CD (Time)
+    -- D. Cooldown (Time)
     if cond.checkCDTime then
         table.insert(checks, "T")
+        local start, duration = GetSpellCooldown(spellID)
+        if start > 0 then cdRemain = duration - (GetTime() - start) end
+        if cdRemain < 0 then cdRemain = 0 end
+
         if isReady then
             local val = tonumber(cond.cdValue) or 0
             local op = cond.op or "<"
@@ -74,3 +66,4 @@ Rot:RegisterCondition("SPELL_READY", function(cond, step)
     
     return isReady, note, valueStr
 end)
+-- Timestamp: 2023-12-04 15:00:00

@@ -1,10 +1,10 @@
 {
-    "square_size": 60,
+    "square_size": 115,
     "cell_size": 10,
     "padding": 0,
     "root_dir": "C:\\Program Files (x86)\\World of Warcraft\\_classic_era_",
     "selected_account": "JC230285",
     "selected_character": "Spineshatter/Jambopally",
-    "window_x": 390,
-    "window_y": 18
+    "window_x": 737,
+    "window_y": -698
 }
