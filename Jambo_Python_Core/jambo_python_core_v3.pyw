@@ -142,7 +142,7 @@ def ensure_repo(addon_dir: str, repo_url: str = 'https://github.com/jc230285/Jam
 
 def get_default_branch(addon_dir: str) -> str:
     try:
-        res = subprocess.run(["git", "remote", "show", "origin"], capture_output=True, text=True, cwd=addon_dir)
+        res = subprocess.run(["git", "remote", "show", "origin"], capture_output=True, text=True, cwd=addon_dir, creationflags=CREATE_NO_WINDOW)
         if res.returncode == 0 and res.stdout:
             for line in res.stdout.splitlines():
                 if "HEAD branch" in line:
@@ -161,6 +161,9 @@ import win32api
 import ctypes
 from ctypes import wintypes
 import subprocess as _subprocess
+
+# Windows constant to prevent subprocess from creating console windows
+CREATE_NO_WINDOW = 0x08000000
 
 # --- Windows elevation helpers ---
 def is_elevated() -> bool:
@@ -568,7 +571,7 @@ class OptionsWindow(tk.Toplevel):
     def _get_branches(self, cwd=None):
         try:
             if not cwd: cwd = os.path.dirname(__file__)
-            result = subprocess.run(["git", "branch", "-r"], capture_output=True, text=True, cwd=cwd)
+            result = subprocess.run(["git", "branch", "-r"], capture_output=True, text=True, cwd=cwd, creationflags=CREATE_NO_WINDOW)
             if result.returncode == 0:
                 branches = []
                 for line in result.stdout.splitlines():
@@ -597,7 +600,7 @@ class OptionsWindow(tk.Toplevel):
     def _get_current_branch(self, cwd=None):
         try:
             if not cwd: cwd = os.path.dirname(__file__)
-            result = subprocess.run(["git", "branch", "--show-current"], capture_output=True, text=True, cwd=cwd)
+            result = subprocess.run(["git", "branch", "--show-current"], capture_output=True, text=True, cwd=cwd, creationflags=CREATE_NO_WINDOW)
             if result.returncode == 0:
                 return result.stdout.strip()
         except Exception as e:
@@ -612,7 +615,7 @@ class OptionsWindow(tk.Toplevel):
                 branch_to_checkout = branch
                 if branch == "default":
                     branch_to_checkout = get_default_branch(addon_dir)
-                subprocess.run(["git", "checkout", branch_to_checkout], cwd=addon_dir)
+                subprocess.run(["git", "checkout", branch_to_checkout], cwd=addon_dir, creationflags=CREATE_NO_WINDOW)
                 messagebox.showinfo("Branch Changed", f"Switched to branch: {branch}")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to switch branch: {e}")
@@ -628,17 +631,19 @@ class OptionsWindow(tk.Toplevel):
                 self.parent._log_raw(f"[AUTO] Fetching updates for {addon_dir}...", "Warn")
             except Exception:
                 pass
-            subprocess.run(["git", "fetch"], cwd=addon_dir)
+            subprocess.run(["git", "fetch"], cwd=addon_dir, creationflags=CREATE_NO_WINDOW)
             # Check if behind
-            result = subprocess.run(["git", "status", "-uno"], capture_output=True, text=True, cwd=addon_dir)
+            result = subprocess.run(["git", "status", "-uno"], capture_output=True, text=True, cwd=addon_dir, creationflags=CREATE_NO_WINDOW)
             if "behind" in result.stdout:
                 # Pull
                 try:
                     self.parent._log_raw(f"[AUTO] Pulling updates to {addon_dir}...", "Warn")
                 except Exception:
                     pass
-                pull_result = subprocess.run(["git", "pull"], cwd=addon_dir)
+                pull_result = subprocess.run(["git", "pull"], cwd=addon_dir, creationflags=CREATE_NO_WINDOW)
                 if pull_result.returncode == 0:
+                    # Push updates to beta branch
+                    subprocess.run(["git", "push"], cwd=addon_dir, creationflags=CREATE_NO_WINDOW)
                     messagebox.showinfo("Update", "Addon updated successfully!")
                 else:
                     messagebox.showerror("Update Failed", "Failed to pull updates.")
@@ -822,13 +827,15 @@ class Overlay(tk.Tk):
             try:
                 # Fetch
                 addon_dir = get_addon_install_dir(self.config_data.get("root_dir", ""))
-                subprocess.run(["git", "fetch"], cwd=addon_dir, capture_output=True)
+                subprocess.run(["git", "fetch"], cwd=addon_dir, capture_output=True, creationflags=CREATE_NO_WINDOW)
                 # Check status
-                result = subprocess.run(["git", "status", "-uno"], capture_output=True, text=True, cwd=addon_dir)
+                result = subprocess.run(["git", "status", "-uno"], capture_output=True, text=True, cwd=addon_dir, creationflags=CREATE_NO_WINDOW)
                 if "behind" in result.stdout:
                     # Pull
-                    pull_result = subprocess.run(["git", "pull"], cwd=addon_dir, capture_output=True)
+                    pull_result = subprocess.run(["git", "pull"], cwd=addon_dir, capture_output=True, creationflags=CREATE_NO_WINDOW)
                     if pull_result.returncode == 0:
+                        # Push updates to beta branch
+                        subprocess.run(["git", "push"], cwd=addon_dir, capture_output=True, creationflags=CREATE_NO_WINDOW)
                         self._log_raw("[AUTO] Addon updated from Git", "Warn")
                     else:
                         self._log_raw("[AUTO] Failed to update addon", "Warn")
