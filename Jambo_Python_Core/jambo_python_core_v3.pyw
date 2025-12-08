@@ -107,16 +107,20 @@ def ensure_repo(addon_dir: str, repo_url: str = 'https://github.com/jc230285/Jam
                         # Copy directory recursively
                         print(f"[AUTO] Copying folder: {item}")
                         if os.path.exists(dest_path):
-                            print(f"[AUTO] Removing existing: {dest_path}")
-                            shutil.rmtree(dest_path, onerror=remove_readonly)
-                        shutil.copytree(source_path, dest_path)
+                            print(f"[AUTO] Updating existing folder: {dest_path}")
+                            # Use copytree with dirs_exist_ok=True to merge/overwrite
+                            shutil.copytree(source_path, dest_path, dirs_exist_ok=True)
+                        else:
+                            shutil.copytree(source_path, dest_path)
                     else:
                         # Copy file
                         print(f"[AUTO] Copying file: {item}")
                         shutil.copy2(source_path, dest_path)
                 except Exception as e:
                     print(f"[AUTO] Failed to copy {item}: {e}")
-                    raise
+                    if callable(log_fn):
+                        try: log_fn(f"[AUTO] Failed to copy {item}: {e}", "Warn")
+                        except Exception: pass
             
             if callable(log_fn):
                 try: log_fn(f"[AUTO] Addon installed successfully!", "Warn")
