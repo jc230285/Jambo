@@ -29,6 +29,12 @@ DEFAULT_BINDINGS = {
     "FOLLOWTARGET": None
 }
 
+# Default ActionSlot bindings for top-number row (slots 1-12)
+# In WoW default keybinds the top row keys map to the first actionbar slots.
+# Mapping: 1..9 -> '1'..'9', 10 -> '0', 11 -> '-', 12 -> '='
+for i, key in enumerate(["1","2","3","4","5","6","7","8","9","0","-","="], start=1):
+    DEFAULT_BINDINGS[f"ACTIONBUTTON{i}"] = key
+
 def get_accounts(root_dir):
     path = Path(root_dir) / "WTF" / "Account"
     if not path.exists(): return []
@@ -96,5 +102,10 @@ def load_bindings(root_dir, account, character=""):
                             if slot: 
                                 slot_map[slot] = key
             except: pass
+    # If no bindings-cache exists or to fill in any missing slots, map any ACTIONBUTTON default/overridden keys into slot_map
+    for action, key in action_map.items():
+        slot = _action_to_slot(action)
+        if slot and (slot not in slot_map):
+            slot_map[slot] = key
             
     return slot_map, action_map

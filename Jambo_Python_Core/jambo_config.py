@@ -13,6 +13,8 @@ DEFAULT_CONFIG = {
     "selected_character": "",
     "window_x": 50,
     "window_y": 50,
+    "toggle_key": "`",
+    "toggle_vk": 0,
 }
 
 def load():
