@@ -117,9 +117,32 @@ f:SetScript("OnEvent", function(_, event, arg1)
                 J.scanTimer = nil
             end)
         end
+        -- If we have a spellID, update icon for that spell only
+        if event == "LEARNED_SPELL_IN_TAB" and arg1 and J.UpdateSpellIcon then J:UpdateSpellIcon(arg1) end
+        -- For actionbar slot changes, attempt to update the specific action's icon (spell or item)
+        if event == "ACTIONBAR_SLOT_CHANGED" and arg1 then
+            local slot = tonumber(arg1) or arg1
+            if slot then
+                local tp, id = GetActionInfo(slot)
+                if tp == "spell" and id and J.UpdateSpellIcon then J:UpdateSpellIcon(id) end
+                if tp == "item" and id and J.UpdateItemIcons then J:UpdateItemIcons(id) end
+            end
+        end
         
     elseif event == "GET_ITEM_INFO_RECEIVED" then
+        -- When item info arrives, refresh macros (so icons in macros update),
+        -- and schedule a FullScan to update spell/item icons in the UI. Throttle
+        -- the full scan to avoid running it repeatedly while multiple items are
+        -- arriving.
+        local itemID = tonumber(arg1)
         if J.ScanBagsForMacros then J:ScanBagsForMacros() end
+        if itemID and J.UpdateItemIcons then J:UpdateItemIcons(itemID) end
+        if not J.itemInfoTimer then
+            J.itemInfoTimer = C_Timer.NewTimer(0.5, function()
+                if J.FullScan then J:FullScan() end
+                J.itemInfoTimer = nil
+            end)
+        end
     end
 end)
 

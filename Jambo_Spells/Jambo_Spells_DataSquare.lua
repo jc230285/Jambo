@@ -108,6 +108,26 @@ local function gatherAutoStats()
     end
     
     local mapID, x, y = getPlayerMapInfo()
+    -- If the target priority is a nameplate and is friendly, offset the mapID by +25
+    local bestIdx = stats["target_priority"]
+    if bestIdx and bestIdx >= 200 and JamboTarget and JamboTarget.GetUnitID then
+        local uid = JamboTarget:GetUnitID(bestIdx)
+        -- Only add offset if the unit is a nameplate AND friendly, and if mapID is valid (> 0)
+        if uid and UnitExists(uid) and tostring(uid):match("^nameplate%d+$") and UnitIsFriend("player", uid) then
+            if mapID and mapID > 0 then
+                local original = mapID
+                mapID = mapID + 25
+                -- Debugging: If JamboDataSquareDB.debug is set we print a throttled message so you can confirm
+                if JamboDataSquareDB and JamboDataSquareDB.debug then
+                    ds_debug_time = ds_debug_time or 0
+                    if (GetTime() - ds_debug_time) > 1 then
+                        print(string.format("[JamboDataSquare] Friendly nameplate offset applied. mapID: %d -> %d (bestIdx=%s uid=%s)", original, mapID, tostring(bestIdx), tostring(uid)))
+                        ds_debug_time = GetTime()
+                    end
+                end
+            end
+        end
+    end
     local mapLo, mapHi = split16bits(mapID, 65025)
     stats["map_id_lo"] = mapLo
     stats["map_id_hi"] = mapHi

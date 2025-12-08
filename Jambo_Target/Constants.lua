@@ -7,7 +7,7 @@ local C = NS.Constants
 C.MEDIA = {
     bar = "Interface\\Buttons\\WHITE8x8",
     font = "Fonts\\FRIZQT__.TTF",
-    bg = {0.1, 0.1, 0.1, 0.95},
+    bg = {0, 0, 0, 0}, -- Transparent background
     border = {0, 0, 0, 1},
     headerColor = {0.2, 0.6, 1, 1},
     groupColor = {0.4, 0.4, 0.4, 1}
@@ -16,7 +16,7 @@ C.MEDIA = {
 -- Dimensions (Half Width)
 C.ROW_HEIGHT = 28
 C.MAX_ROWS = 16
-C.FRAME_WIDTH = 300 -- Narrower
+C.FRAME_WIDTH = 300 
 C.SCROLLBAR_WIDTH = 30
 
 -- Sort Modes
@@ -30,11 +30,13 @@ C.DEFAULTS = {
     options = {
         targetDeficitPercent = 20,
         targetDeficitHP = 0,
-        targetHealSpellId = nil,
+        targetHealSpellId = nil, -- Default to None
         targetHarmSpellId = nil,
         targetFrameOffset = { x = -700, y = 125 },
-        showConfig = false, -- Toggle state
-        enemySortMode = C.SORT_HP_ASC, -- Default sort
+        showConfig = false, 
+        showAllGroups = false, -- Default Off
+        debugMapID = false,
+        enemySortMode = C.SORT_HP_ASC, 
     },
     data = {},
 }

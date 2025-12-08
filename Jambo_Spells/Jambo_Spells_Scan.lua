@@ -48,6 +48,14 @@ local function FindSlotForSpell(spellID)
     return 0
 end
 
+local function FindSlotForMacro(macroIndex)
+    for slot = 1, 120 do
+        local type, id = GetActionInfo(slot)
+        if type == "macro" and id == macroIndex then return slot end
+    end
+    return 0
+end
+
 function J:FullScan()
     local masterList = {}
     local seenIDs = {}
@@ -129,7 +137,7 @@ function J:FullScan()
         end
     end
     
-    -- 3. ITEMS & 4. MACROS
+    -- 3. ITEMS
     local seenItems = {}
     for bag = 0, 4 do
         for slot = 1, C_Container.GetContainerNumSlots(bag) do
@@ -153,13 +161,15 @@ function J:FullScan()
         end
     end
 
+    -- 4. MACROS (FIXED: Uses FindSlotForMacro)
     local numGlobal, numChar = GetNumMacros()
     for i = 1, numGlobal + numChar do
         local name, icon, body = GetMacroInfo(i)
         if name then
+            local slot = FindSlotForMacro(i) -- Detect if this macro is on the bar
             table.insert(masterList, {
                 TYPE = "MACRO", NAME = name, ID = i, RANK = 1, LEVEL = 0,
-                ICON = icon, DESC = body, COST = 0, CAST = 0, RANGE = 0, SLOT = 0, KNOWN = true,
+                ICON = icon, DESC = body, COST = 0, CAST = 0, RANGE = 0, SLOT = slot, KNOWN = true,
                 HEAL_TOTAL = 0, DMG_TOTAL = 0, HPS = 0, HPM = 0, DPS = 0, DPM = 0
             })
         end
@@ -169,4 +179,39 @@ function J:FullScan()
     if J.SaveCache then J:SaveCache() end
     if J.RefreshUI then J:RefreshUI() end
     if J.ScanBagsForMacros then J:ScanBagsForMacros() end
+end
+
+-- Targeted icon updates
+function J:UpdateItemIcons(itemID)
+    if not itemID then return end
+    local id = tonumber(itemID) or itemID
+    if not id then return end
+    local name, link, _, _, _, _, _, _, _, icon = GetItemInfo(id)
+    if not icon then return end
+    local updated = false
+    local list = J.data.spells or {}
+    for _, info in ipairs(list) do
+        if info and info.TYPE == "ITEM" and info.ID == id then
+            info.ICON = icon
+            updated = true
+        end
+    end
+    if updated and J.RefreshUI then J:RefreshUI() end
+end
+
+function J:UpdateSpellIcon(spellID)
+    if not spellID then return end
+    local id = tonumber(spellID) or spellID
+    if not id then return end
+    local name, rankText, icon = GetSpellInfo(id)
+    if not icon then return end
+    local updated = false
+    local list = J.data.spells or {}
+    for _, info in ipairs(list) do
+        if info and info.TYPE == "SPELL" and info.ID == id then
+            info.ICON = icon
+            updated = true
+        end
+    end
+    if updated and J.RefreshUI then J:RefreshUI() end
 end

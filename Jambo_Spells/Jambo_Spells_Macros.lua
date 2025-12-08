@@ -30,26 +30,26 @@ function J:ScanBagsForMacros()
                     
                     -- 1. Potions
                     if lower:find("healing potion") or lower:find("health potion") or lower:find("minor potion") or lower:find("lesser potion") then 
-                        table.insert(potions.heal, {name=name, lvl=minLevel or 0}) 
+                        table.insert(potions.heal, {name=name, lvl=minLevel or 0, id = id}) 
                     elseif lower:find("mana potion") then 
-                        table.insert(potions.mana, {name=name, lvl=minLevel or 0}) 
+                        table.insert(potions.mana, {name=name, lvl=minLevel or 0, id = id}) 
                     
                     -- 2. Bandages
                     elseif lower:find("bandage") then
-                        table.insert(bandages, {name=name, lvl=minLevel or 0})
+                        table.insert(bandages, {name=name, lvl=minLevel or 0, id = id})
                         
                     -- 3. Scrolls
                     elseif lower:find("scroll of") then
-                        table.insert(scrolls, {name=name, lvl=minLevel or 0})
+                        table.insert(scrolls, {name=name, lvl=minLevel or 0, id = id})
                     
                     -- 4. Drinks
                     elseif lower:find("water") or lower:find("milk") or lower:find("juice") or lower:find("refreshing") or lower:find("beverage") or lower:find("drink") or lower:find("nectar") or lower:find("ice cold") then
-                        table.insert(water, {name=name, lvl=minLevel or 0})
+                        table.insert(water, {name=name, lvl=minLevel or 0, id = id})
                     
                     -- 5. Food (Fallback for other consumables that aren't the above)
                     -- Exclude specific non-food items if needed (like stones, oils)
                     elseif not lower:find("stone") and not lower:find("oil") and not lower:find("powder") then
-                        table.insert(food, {name=name, lvl=minLevel or 0})
+                        table.insert(food, {name=name, lvl=minLevel or 0, id = id})
                     end
                 end
             end
@@ -79,45 +79,91 @@ function J:ScanBagsForMacros()
 
     -- Update Macros
     if #potions.heal > 0 then
-        local item = potions.heal[1].name
-        J:UpdateMacro("AutoHeal", "/use " .. item, "134832")
-        J:UpdateMacro("HPPotion", "#showtooltip " .. item .. "\n/use " .. item, "134832")
+        local itemInfo = potions.heal[1]
+        local itemIcon = "134832"
+        if itemInfo and itemInfo.id then
+            local n, link, _, _, _, _, _, _, _, ic = GetItemInfo(itemInfo.id)
+            if ic then itemIcon = ic end
+        end
+        local item = itemInfo.name
+        J:UpdateMacro("AutoHeal", "/use " .. item, itemIcon)
+        J:UpdateMacro("HPPotion", "#showtooltip " .. item .. "\n/use " .. item, itemIcon)
     end
     
     if #potions.mana > 0 then
-        local item = potions.mana[1].name
-        J:UpdateMacro("AutoMana", "/use " .. item, "134850")
-        J:UpdateMacro("MPPotion", "#showtooltip " .. item .. "\n/use " .. item, "134850")
+        local itemInfo = potions.mana[1]
+        local itemIcon = "134850"
+        if itemInfo and itemInfo.id then
+            local n, link, _, _, _, _, _, _, _, ic = GetItemInfo(itemInfo.id)
+            if ic then itemIcon = ic end
+        end
+        local item = itemInfo.name
+        J:UpdateMacro("AutoMana", "/use " .. item, itemIcon)
+        J:UpdateMacro("MPPotion", "#showtooltip " .. item .. "\n/use " .. item, itemIcon)
     end
     
     if #food > 0 then
-        local item = food[1].name
-        J:UpdateMacro("EatFood", "#showtooltip " .. item .. "\n/use " .. item, "133972")
+        local itemInfo = food[1]
+        local itemIcon = "133972"
+        if itemInfo and itemInfo.id then
+            local n, link, _, _, _, _, _, _, _, ic = GetItemInfo(itemInfo.id)
+            if ic then itemIcon = ic end
+        end
+        local item = itemInfo.name
+        J:UpdateMacro("EatFood", "#showtooltip " .. item .. "\n/use " .. item, itemIcon)
     end
     
     if #water > 0 then
-        local item = water[1].name
-        J:UpdateMacro("DrinkWater", "#showtooltip " .. item .. "\n/use " .. item, "132794")
+        local itemInfo = water[1]
+        local itemIcon = "132794"
+        if itemInfo and itemInfo.id then
+            local n, link, _, _, _, _, _, _, _, ic = GetItemInfo(itemInfo.id)
+            if ic then itemIcon = ic end
+        end
+        local item = itemInfo.name
+        J:UpdateMacro("DrinkWater", "#showtooltip " .. item .. "\n/use " .. item, itemIcon)
     end
     
     if #food > 0 and #water > 0 then
-        local f = food[1].name
-        local w = water[1].name
-        J:UpdateMacro("Feast", "#showtooltip " .. f .. "\n/use " .. f .. "\n/use " .. w, "132794")
+        local fInfo = food[1]
+        local wInfo = water[1]
+        local itemIcon = "132794"
+        if fInfo and fInfo.id then
+            local n, link, _, _, _, _, _, _, _, ic = GetItemInfo(fInfo.id)
+            if ic then itemIcon = ic end
+        elseif wInfo and wInfo.id then
+            local n, link, _, _, _, _, _, _, _, ic = GetItemInfo(wInfo.id)
+            if ic then itemIcon = ic end
+        end
+        local f = fInfo.name
+        local w = wInfo.name
+        J:UpdateMacro("Feast", "#showtooltip " .. f .. "\n/use " .. f .. "\n/use " .. w, itemIcon)
     end
 
     if #bandages > 0 then
-        local item = bandages[1].name
-        J:UpdateMacro("Bandage", "#showtooltip " .. item .. "\n/use [target=player] " .. item, "134330")
+        local itemInfo = bandages[1]
+        local itemIcon = "134330"
+        if itemInfo and itemInfo.id then
+            local n, link, _, _, _, _, _, _, _, ic = GetItemInfo(itemInfo.id)
+            if ic then itemIcon = ic end
+        end
+        local item = itemInfo.name
+        J:UpdateMacro("AutoBandage", "#showtooltip " .. item .. "\n/use [target=player] " .. item, itemIcon)
     end
     
     if #scrolls > 0 then
         -- Stack scrolls in one macro
-        local body = "#showtooltip " .. scrolls[1].name
+        local sInfo = scrolls[1]
+        local body = "#showtooltip " .. sInfo.name
+        local itemIcon = "134937"
+        if sInfo and sInfo.id then
+            local n, link, _, _, _, _, _, _, _, ic = GetItemInfo(sInfo.id)
+            if ic then itemIcon = ic end
+        end
         for _, s in ipairs(scrolls) do
             body = body .. "\n/use " .. s.name
         end
-        J:UpdateMacro("Scrolls", body, "134937")
+        J:UpdateMacro("AutoScrolls", body, itemIcon)
     end
 end
 
@@ -144,8 +190,8 @@ function J:CreateUtilityMacros()
         {"EatFood", "133972", "#showtooltip item:117\n/use item:117"}, 
         {"AutoHeal", "134832", "#showtooltip item:118\n/use item:118"}, 
         {"AutoMana", "134850", "#showtooltip item:2455\n/use item:2455"}, 
-        {"Bandage", "134330", "#showtooltip item:1251\n/use [target=player] item:1251"},
-        {"Scrolls", "134937", "#showtooltip item:955\n/use Scroll of Strength\n/use Scroll of Agility"},
+        {"AutoBandage", "134330", "#showtooltip item:1251\n/use [target=player] item:1251"},
+        {"AutoScrolls", "134937", "#showtooltip item:955\n/use Scroll of Strength\n/use Scroll of Agility"},
         
         {"Break 10", "254288", "/dbm timer 600 10 Minute Break!\n/y 10 Minute Break!"},
         {"Break 5", "132161", "/dbm timer 300 5 Minute Break!\n/y 5 Minute Break!"},
@@ -153,8 +199,8 @@ function J:CreateUtilityMacros()
         {"CycleFriend", "132108", "#showtooltip\n/cleartarget [dead][noexists]\n/targetfriend [noharm]"},
         {"Reload", "132096", "/reload"},
         {"Roll", "252184", "/roll"},
-        {"Shoot", "132329", "#showtooltip Shoot\n/castsequence [harm] reset=2 !Shoot, null\n/castsequence [help,target=targettarget] reset=2 !Shoot, null"},
-        {"Attack", "132349", "#showtooltip 16\n/cleartarget [dead]\n/startattack [harm,nodead]\n/targetenemy [noexists]"},
+        {"AutoShoot", "132329", "#showtooltip Shoot\n/castsequence [harm] reset=2 !Shoot, null\n/castsequence [help,target=targettarget] reset=2 !Shoot, null"},
+        {"AutoAttack", "132349", "#showtooltip 16\n/cleartarget [dead]\n/startattack [harm,nodead]\n/targetenemy [noexists]"},
         {"T1", "134400", "#showtooltip 13\n/use 13"},
         {"T2", "134400", "#showtooltip 14\n/use 14"},
     }

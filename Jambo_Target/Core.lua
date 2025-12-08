@@ -20,7 +20,6 @@ for i=1,5 do PRIORITY_MAP[1+i] = "party"..i end
 for i=1,40 do PRIORITY_MAP[20+i] = "raid"..i end
 for i=1,5 do PRIORITY_MAP[70+i] = "arena"..i end
 for i=1,5 do PRIORITY_MAP[80+i] = "boss"..i end
-for i=1,40 do PRIORITY_MAP[200+i] = "nameplate"..i end
 
 function JamboTarget:GetUnitID(index)
     return PRIORITY_MAP[tonumber(index)]
@@ -57,29 +56,31 @@ end
 function NS:GetUnitIndex(uid)
     if not UnitExists(uid) then return 255 end
     
-    -- 1. ABSOLUTE PRIORITY: Is this the Target?
     if UnitIsUnit(uid, "target") then return 0 end
-
-    -- 2. Identity Checks
     if UnitIsUnit(uid, "player") then return 1 end
     
     for i=1,5 do 
         if UnitIsUnit(uid, "party"..i) then return 1 + i end 
     end
 
-    -- 3. Secondary Tokens
     if UnitIsUnit(uid, "mouseover") then return 10 end
     if UnitIsUnit(uid, "focus") then return 11 end
     if UnitIsUnit(uid, "pet") then return 12 end
 
-    -- 4. Groups
     for i=1,40 do if UnitIsUnit(uid, "raid"..i) then return 20 + i end end
     for i=1,5 do if UnitIsUnit(uid, "arena"..i) then return 70 + i end end
     for i=1,5 do if UnitIsUnit(uid, "boss"..i) then return 80 + i end end
     
-    -- 5. Nameplates
+    -- Nameplates
     local npNum = uid:match("^nameplate(%d+)$")
-    if npNum then return 200 + tonumber(npNum) end
+    if npNum then 
+        local idx = tonumber(npNum)
+        if UnitIsFriend("player", uid) then
+            return 226 + (idx % 28)
+        else
+            return 201 + (idx % 25)
+        end
+    end
     
     return 200 
 end
@@ -91,7 +92,6 @@ for i=1,5 do table.insert(CACHED_GROUPS, "party"..i); table.insert(CACHED_GROUPS
 for i=1,5 do table.insert(CACHED_GROUPS, "boss"..i); table.insert(CACHED_GROUPS, "arena"..i) end
 
 function NS.Core:ScanUnits()
-    -- Use GUID as key to separate entities with same name
     local found = {} 
     
     local function add(uid)
@@ -101,7 +101,6 @@ function NS.Core:ScanUnits()
         if not guid then return end
         
         local prio = NS:GetUnitIndex(uid)
-        -- Visual Override for the "target" token itself in the list
         if uid == "target" then prio = 0 end 
 
         if found[guid] then
@@ -134,10 +133,19 @@ end
 
 NS.events:RegisterEvent("ADDON_LOADED")
 NS.events:RegisterEvent("PLAYER_LOGIN")
+NS.events:RegisterEvent("GROUP_ROSTER_UPDATE") -- Detect Joins/Leaves
+
 NS.events:SetScript("OnEvent", function(_, event, arg1)
-    if event == "ADDON_LOADED" and arg1 == ADDON then NS.Core:EnsureDB()
+    if event == "ADDON_LOADED" and arg1 == ADDON then 
+        NS.Core:EnsureDB()
     elseif event == "PLAYER_LOGIN" then
         if NS.UI and NS.UI.Init then NS.UI:Init() end
+        -- Calculate limits once on login
+        if NS.Groups and NS.Groups.RecalculateLimits then NS.Groups:RecalculateLimits() end
         C_Timer.NewTicker(0.5, function() NS.Core:ScanUnits() end)
+    elseif event == "GROUP_ROSTER_UPDATE" then
+        -- Only recalculate slider range when group changes
+        if NS.Groups and NS.Groups.RecalculateLimits then NS.Groups:RecalculateLimits() end
+        NS.Core:ScanUnits()
     end
 end)

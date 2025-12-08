@@ -1,0 +1,13 @@
+## Interface: 11508
+## Title: |cff1784d1Jambo|r Professions
+## Notes: Full profession automation with Zygor data extraction.
+## Author: You
+## Version: 3.0
+## SavedVariables: JamboProfDB
+
+Helpers.lua
+Lists_Items.lua
+Lists_NPCs.lua
+Lists_Routes.lua
+Lists_Guides.lua
+Core.lua
