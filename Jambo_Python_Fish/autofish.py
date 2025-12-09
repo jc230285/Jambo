@@ -254,43 +254,83 @@ class FishingBotThread(threading.Thread):
 
     def find_bobber(self):
         img = self.capture_zone()
-        
-        # Method A: Template
-        if self.config['template_path'] and os.path.exists(self.config['template_path']):
-            try:
-                template = cv2.imread(self.config['template_path'])
-                result = cv2.matchTemplate(img, template, cv2.TM_CCOEFF_NORMED)
-                min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
-                
-                h, w = template.shape[:2]
-                cv2.rectangle(img, max_loc, (max_loc[0] + w, max_loc[1] + h), (0, 255, 0), 2)
-                self.update_preview(img)
-
-                if max_val > 0.60: 
-                    x = self.config['zone']['left'] + max_loc[0] + w//2
-                    y = self.config['zone']['top'] + max_loc[1] + h//2
-                    return (x, y, float(max_val))
-            except Exception as e:
-                print(f"Template error: {e}")
-
-        # Method B: Fallback Color
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        lower1 = np.array([0, 70, 50])
-        upper1 = np.array([10, 255, 255])
-        mask = cv2.inRange(hsv, lower1, upper1)
         
-        contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        if contours:
-            c = max(contours, key=cv2.contourArea)
-            if cv2.contourArea(c) > 50:
-                x, y, w, h = cv2.boundingRect(c)
-                cv2.rectangle(img, (x, y), (x+w, y+h), (0, 0, 255), 2)
-                self.update_preview(img)
-            area = cv2.contourArea(c)
-            img_area = img.shape[0] * img.shape[1]
-            confidence = min(1.0, area / float(max(1, img_area)))
-            return (self.config['zone']['left'] + x + w//2, 
-                self.config['zone']['top'] + y + h//2, float(confidence))
+        # Detect three bobber components:
+        # 1. Red fin (top)
+        red_lower = np.array([0, 70, 50])
+        red_upper = np.array([10, 255, 255])
+        red_mask = cv2.inRange(hsv, red_lower, red_upper)
+        
+        # 2. Blue body (middle)
+        blue_lower = np.array([100, 50, 50])
+        blue_upper = np.array([130, 255, 255])
+        blue_mask = cv2.inRange(hsv, blue_lower, blue_upper)
+        
+        # 3. Cork/beige (bottom) - yellow-brown range
+        cork_lower = np.array([15, 30, 80])
+        cork_upper = np.array([30, 150, 200])
+        cork_mask = cv2.inRange(hsv, cork_lower, cork_upper)
+        
+        # Combine all masks
+        combined_mask = cv2.bitwise_or(red_mask, blue_mask)
+        combined_mask = cv2.bitwise_or(combined_mask, cork_mask)
+        
+        # Find contours on combined mask
+        contours, _ = cv2.findContours(combined_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        best_bobber = None
+        best_score = 0
+        
+        for cnt in contours:
+            area = cv2.contourArea(cnt)
+            if area < 30:  # Too small
+                continue
+            
+            x, y, w, h = cv2.boundingRect(cnt)
+            
+            # Calculate how many bobber components are present in this region
+            roi_red = red_mask[y:y+h, x:x+w]
+            roi_blue = blue_mask[y:y+h, x:x+w]
+            roi_cork = cork_mask[y:y+h, x:x+w]
+            
+            red_pixels = np.sum(roi_red > 0)
+            blue_pixels = np.sum(roi_blue > 0)
+            cork_pixels = np.sum(roi_cork > 0)
+            
+            # Score based on having all three components
+            component_count = (red_pixels > 5) + (blue_pixels > 5) + (cork_pixels > 5)
+            
+            # Prefer tall, narrow shapes (bobber is vertical)
+            aspect_ratio = h / float(max(w, 1))
+            
+            # Combined score: prioritize having all 3 components + vertical shape
+            score = component_count * 100 + aspect_ratio * 10 + area * 0.1
+            
+            if score > best_score:
+                best_score = score
+                best_bobber = (cnt, x, y, w, h, component_count)
+        
+        if best_bobber:
+            cnt, x, y, w, h, components = best_bobber
+            
+            # Draw outline around detected bobber
+            cv2.drawContours(img, [cnt], -1, (0, 255, 0), 2)
+            
+            # Draw colored boxes for each component detected
+            if components >= 2:  # At least 2 components
+                cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 255), 1)
+                cv2.putText(img, f"Bobber ({components}/3)", (x, y-5), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0), 1)
+            
+            self.update_preview(img)
+            
+            # Calculate screen coordinates
+            screen_x = self.config['zone']['left'] + x + w//2
+            screen_y = self.config['zone']['top'] + y + h//2
+            confidence = min(1.0, best_score / 300.0)
+            
+            return (screen_x, screen_y, float(confidence))
         
         self.update_preview(img)
         return None
@@ -352,7 +392,7 @@ class FishingBotThread(threading.Thread):
     def _is_bobber_still_at(self, x, y, check_radius=30):
         """Check a small region around absolute screen coords (x,y) for bobber-like color/texture.
         Returns True ONLY if bobber is confidently detected in that region.
-        Uses both color mask AND template matching for high confidence.
+        Uses multi-color detection (red fin, blue body, cork) for high confidence.
         """
         try:
             left = int(x - check_radius // 2)
@@ -362,45 +402,31 @@ class FishingBotThread(threading.Thread):
                 img = np.array(sct.grab(monitor))
             
             bgr = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
-            
-            # Check 1: Color mask for red/orange bobber
             hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
-            lower1 = np.array([0, 60, 60])
-            upper1 = np.array([15, 255, 255])
-            mask = cv2.inRange(hsv, lower1, upper1)
-            cnts, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             
-            color_match = False
-            if cnts:
-                c = max(cnts, key=cv2.contourArea)
-                area = cv2.contourArea(c)
-                # Require minimum area to avoid false positives
-                if area > 20:
-                    color_match = True
+            # Check for red fin
+            red_lower = np.array([0, 60, 60])
+            red_upper = np.array([15, 255, 255])
+            red_mask = cv2.inRange(hsv, red_lower, red_upper)
+            red_pixels = np.sum(red_mask > 0)
             
-            # Check 2: Template matching (if template exists)
-            template_match = False
-            if self.config.get('template_path') and os.path.exists(self.config.get('template_path')):
-                try:
-                    tpl = cv2.imread(self.config.get('template_path'))
-                    th, tw = tpl.shape[:2]
-                    # Only use template if it fits in the check region
-                    if th <= check_radius and tw <= check_radius:
-                        res = cv2.matchTemplate(bgr, tpl, cv2.TM_CCOEFF_NORMED)
-                        _, maxv, _, _ = cv2.minMaxLoc(res)
-                        # Higher threshold for safety
-                        if maxv > 0.7:
-                            template_match = True
-                except Exception:
-                    pass
+            # Check for blue body
+            blue_lower = np.array([100, 50, 50])
+            blue_upper = np.array([130, 255, 255])
+            blue_mask = cv2.inRange(hsv, blue_lower, blue_upper)
+            blue_pixels = np.sum(blue_mask > 0)
             
-            # Require BOTH color AND template match for high confidence
-            # If no template, require only color match but with stricter area requirement
-            if template_match and color_match:
+            # Check for cork/beige
+            cork_lower = np.array([15, 30, 80])
+            cork_upper = np.array([30, 150, 200])
+            cork_mask = cv2.inRange(hsv, cork_lower, cork_upper)
+            cork_pixels = np.sum(cork_mask > 0)
+            
+            # Require at least 2 of 3 components with sufficient pixels
+            components_found = (red_pixels > 8) + (blue_pixels > 8) + (cork_pixels > 8)
+            
+            if components_found >= 2:
                 return True
-            elif not self.config.get('template_path') and color_match:
-                # If no template available, be more conservative
-                return cnts and cv2.contourArea(max(cnts, key=cv2.contourArea)) > 50
             
         except Exception as e:
             print(f"Bobber check error: {e}")
