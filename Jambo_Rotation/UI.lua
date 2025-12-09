@@ -80,7 +80,11 @@ function UI:Init()
     f:EnableMouse(true)
     f:RegisterForDrag("LeftButton")
     f:SetScript("OnDragStart", f.StartMoving)
-    f:SetScript("OnDragStop", f.StopMovingOrSizing)
+    f:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        self:SetClampedToScreen(true)
+    end)
+    f:SetClampedToScreen(true)
 
     f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     f.title:SetPoint("TOPLEFT", 8, -8)
@@ -2385,7 +2389,16 @@ function UI:CreateIconFrame()
     i:SetSize(52, 52)
     if NS.db and NS.db.iconPos then
         local p = NS.db.iconPos
-        i:SetPoint(p.point, UIParent, p.relativePoint, p.x, p.y)
+        -- Validate position is on screen
+        local screenWidth = GetScreenWidth()
+        local screenHeight = GetScreenHeight()
+        if p.x and p.y and p.x > -52 and p.x < screenWidth and p.y > -52 and p.y < screenHeight then
+            i:SetPoint(p.point, UIParent, p.relativePoint, p.x, p.y)
+        else
+            -- Invalid position, reset to center
+            i:SetPoint("CENTER", 0, 120)
+            NS.db.iconPos = nil
+        end
     else
         i:SetPoint("CENTER", 0, 120)
     end
@@ -2402,9 +2415,11 @@ function UI:CreateIconFrame()
     i:SetScript("OnDragStart", i.StartMoving)
     i:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
+        self:SetClampedToScreen(true)
         local p, _, r, x, y = self:GetPoint()
         if NS.db then NS.db.iconPos = { point = p, relativePoint = r, x = x, y = y } end
     end)
+    i:SetClampedToScreen(true)
 
     i:RegisterForClicks("AnyUp")
     i:SetScript("OnClick", function(_, button)
