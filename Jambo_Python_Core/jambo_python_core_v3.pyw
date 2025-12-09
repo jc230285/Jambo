@@ -294,66 +294,47 @@ class OptionsWindow(tk.Toplevel):
 
     def _build_ui(self):
         pad = {'padx': 10, 'pady': 5}
+        
+        # Set Square Area at the top
+        tk.Button(self, text="Set Square Area", bg="#0055aa", fg="white", command=self.parent._set_square).pack(fill="x", **pad)
+        
+        # WoW Folder
         ttk.Label(self, text="WoW Folder:").pack(anchor="w", **pad)
         folder_frame = tk.Frame(self, bg="#222"); folder_frame.pack(fill="x", **pad)
         tk.Button(folder_frame, text="Select", bg="#444", fg="white", command=self._select_folder).pack(side="left")
         self.lbl_folder = tk.Label(folder_frame, text=self.parent.config_data.get("root_dir", ""), bg="#333", fg="#eee", anchor="w", font=("Consolas", 8)); self.lbl_folder.pack(side="left", fill="x", expand=True, padx=(5,0))
+        
+        # Git Branch
         ttk.Label(self, text="Git Branch:").pack(anchor="w", **pad)
         branch_frame = tk.Frame(self, bg="#222"); branch_frame.pack(fill="x", **pad)
         self.cb_branch = ttk.Combobox(branch_frame, state="readonly"); self.cb_branch.pack(side="left", fill="x", expand=True)
         self.lbl_git_status = tk.Label(branch_frame, text="", bg="#222", fg="#bbb", font=("Consolas",8)); self.lbl_git_status.pack(side="right")
         self.cb_branch.bind("<<ComboboxSelected>>", self._on_branch_change)
         tk.Button(branch_frame, text="Check Updates", bg="#444", fg="white", command=self._check_updates).pack(side="right", padx=(5,0))
+        
+        # Account
         ttk.Label(self, text="Account:").pack(anchor="w", **pad)
-        ttk.Label(self, text="Toggle Key:").pack(anchor="w", **pad)
-        self.cb_toggle_key = ttk.Combobox(self, state="readonly")
-        self.cb_toggle_key.pack(fill="x", **pad)
-        # common toggle keys
-        keys = ["`", "F1", "F2", "F3", "F4", "TAB", "SPACE", "ESCAPE"]
-        self.cb_toggle_key["values"] = keys
-        self.cb_toggle_key.bind("<<ComboboxSelected>>", self._on_toggle_key_change)
-        tk.Button(self, text="Record Key", bg="#666", fg="white", command=self._record_toggle_key).pack(fill="x", **pad)
-        tk.Button(self, text="Detect Key", bg="#666", fg="white", command=self._detect_toggle_key).pack(fill="x", **pad)
-        tk.Button(self, text="Clear VK", bg="#666", fg="white", command=self._clear_toggle_vk).pack(fill="x", **pad)
-        tk.Button(self, text="Debug Poll", bg="#666", fg="white", command=self._debug_poll_toggle_key).pack(fill="x", **pad)
-        # Show detected VK and saveable state
-        self.lbl_toggle_vk = tk.Label(self, text="VK: 0", bg="#222", fg="#bbb", font=("Consolas",8))
-        self.lbl_toggle_vk.pack(anchor="w", padx=10, pady=(0,2))
         self.cb_account = ttk.Combobox(self, state="readonly"); self.cb_account.pack(fill="x", **pad)
         self.cb_account.bind("<<ComboboxSelected>>", self._on_account_change)
+        
+        # Character
         ttk.Label(self, text="Character:").pack(anchor="w", **pad)
         self.cb_char = ttk.Combobox(self, state="readonly"); self.cb_char.pack(fill="x", **pad)
         self.cb_char.bind("<<ComboboxSelected>>", self._on_char_change)
-        tk.Button(self, text="Reload Bindings", bg="#444", fg="white", command=self.parent._load_bindings).pack(fill="x", **pad)
-        tk.Button(self, text="Reset Overlay Position", bg="#333", fg="white", command=self._reset_position).pack(fill="x", **pad)
-        tk.Button(self, text="Set Square Area", bg="#0055aa", fg="white", command=self.parent._set_square).pack(fill="x", **pad)
-        tk.Button(self, text="Close", bg="#552222", fg="white", command=self.destroy).pack(fill="x", pady=20, padx=10)
-        # Optional: local install into the workspace for devs if Program Files is not writable
-        tk.Button(self, text="Install To Workspace", bg="#444", fg="white", command=self._install_to_workspace).pack(fill="x", **pad)
-        tk.Button(self, text="Restart as Admin", bg="#444", fg="white", command=self._run_as_admin).pack(fill="x", **pad)
 
     def _load_values(self):
         root = self.parent.config_data.get("root_dir", "")
-        accts = bind.get_accounts(root)
-        self.cb_account["values"] = accts
-        saved = self.parent.config_data.get("selected_account", "")
-        if saved in accts: self.cb_account.set(saved); self._on_account_change(None, skip_save=True)
-        # Load toggle key selection
-        tk = self.parent.config_data.get("toggle_key", "`")
-        if tk in self.cb_toggle_key["values"]:
-            self.cb_toggle_key.set(tk)
-        else:
-            self.cb_toggle_key.set("`")
-        # Load branches - don't auto-update when opening Options
+        
+        # Load branches - set beta as default
         addon_dir = get_addon_install_dir(root)
-        branches = self._get_branches(addon_dir)
+        branches = ["beta", "master"]  # Always show beta and master
         self.cb_branch["values"] = branches
         current = self._get_current_branch(addon_dir)
         if current in branches:
             self.cb_branch.set(current)
-        elif branches:
-            # default to first branch (default/beta) if available
-            self.cb_branch.set(branches[0])
+        else:
+            self.cb_branch.set("beta")  # Default to beta
+        
         # Show git status
         try:
             if os.path.isdir(os.path.join(addon_dir, '.git')):
@@ -362,6 +343,18 @@ class OptionsWindow(tk.Toplevel):
                 self.lbl_git_status.config(text="Git: No repo — using default branches")
         except Exception:
             pass
+        
+        # Load accounts
+        accts = bind.get_accounts(root)
+        self.cb_account["values"] = accts
+        saved = self.parent.config_data.get("selected_account", "")
+        if saved in accts:
+            self.cb_account.set(saved)
+            self._on_account_change(None, skip_save=True)
+        elif accts:
+            # Auto-select first account if none saved
+            self.cb_account.set(accts[0])
+            self._on_account_change(None, skip_save=False)
 
     def _on_account_change(self, event, skip_save=False):
         root = self.parent.config_data.get("root_dir", "")
@@ -369,9 +362,15 @@ class OptionsWindow(tk.Toplevel):
         chars = bind.get_characters(root, acct)
         self.cb_char["values"] = chars
         saved = self.parent.config_data.get("selected_character", "")
-        if saved in chars: self.cb_char.set(saved)
-        elif chars: self.cb_char.current(0)
-        else: self.cb_char.set("")
+        if saved in chars:
+            self.cb_char.set(saved)
+        elif chars:
+            # Auto-select first character if none saved
+            self.cb_char.set(chars[0])
+            if not skip_save:
+                self.parent.config_data["selected_character"] = chars[0]
+        else:
+            self.cb_char.set("")
         if not skip_save:
             self.parent.config_data["selected_account"] = acct
             cfg.save(self.parent.config_data)
@@ -382,16 +381,6 @@ class OptionsWindow(tk.Toplevel):
         cfg.save(self.parent.config_data)
         self.parent._load_bindings()
 
-    def _reset_position(self):
-        # Reset overlay position to default and move overlay
-        self.parent.config_data['window_x'] = 50; self.parent.config_data['window_y'] = 50
-        cfg.save(self.parent.config_data)
-        try:
-            self.parent.geometry(f"{MAIN_WIN_W}x{MAIN_WIN_H}+50+50")
-            self.parent.lift()
-        except Exception:
-            pass
-
     def _select_folder(self):
         folder = filedialog.askdirectory(title="Select World of Warcraft Folder", initialdir=self.parent.config_data.get("root_dir", ""))
         if folder:
@@ -399,207 +388,6 @@ class OptionsWindow(tk.Toplevel):
             cfg.save(self.parent.config_data)
             self.lbl_folder.config(text=folder)
             self._load_values()  # Reload accounts with new path
-
-    def _install_to_workspace(self):
-        try:
-            script_dir = os.path.dirname(__file__)
-            if ensure_repo(script_dir, log_fn=self.parent._log_raw):
-                messagebox.showinfo("Installed", f"Jambo cloned/updated into workspace: {script_dir}")
-            else:
-                messagebox.showerror("Install Failed", f"Failed to clone into the workspace: {script_dir}")
-        except Exception as e:
-            messagebox.showerror("Error", f"Install failed: {e}")
-
-    def _run_as_admin(self):
-        try:
-            ok = messagebox.askyesno("Restart as Administrator", "This will relaunch the overlay with Administrator privileges. Continue?")
-            if ok:
-                if relaunch_as_admin():
-                    messagebox.showinfo("Relaunching", "Relaunched as Administrator.")
-                    sys.exit(0)
-                else:
-                    messagebox.showerror("Failed", "Failed to relaunch the overlay as Administrator.")
-        except Exception as e:
-            messagebox.showerror("Error", str(e))
-
-    def _record_toggle_key(self):
-        # Create a small dialog to capture the next keypress and store it as toggle key
-        dlg = tk.Toplevel(self)
-        dlg.title("Record Key")
-        dlg.geometry("300x80")
-        tk.Label(dlg, text="Press any key now...", font=("Segoe UI", 9)).pack(padx=10, pady=10)
-        dlg.attributes("-topmost", True)
-        found = {'vk': None}
-        def poll():
-            for vk in range(0x08, 0xFF):
-                try:
-                    if win32api.GetAsyncKeyState(vk) & 0x8000:
-                        found['vk'] = vk
-                        return
-                except Exception:
-                    pass
-            return
-        def loop_check():
-            if found['vk']:
-                vk = found['vk']
-                # Map vk to string for display
-                name = None
-                if vk >= 0x70 and vk <= 0x87: # F1-F24
-                    name = f"F{vk - 0x70 + 1}"
-                elif vk == 0x09: name = "TAB"
-                elif vk == 0x20: name = "SPACE"
-                elif vk == 0x1B: name = "ESCAPE"
-                elif vk >= 0x30 and vk <= 0x39: name = chr(vk) # 0-9
-                elif vk >= 0x41 and vk <= 0x5A: name = chr(vk) # A-Z
-                elif vk == 0xC0 or vk == ord("`"):
-                    name = "`"
-                else:
-                    name = f"VK_{vk}"
-                # Set combobox and save config
-                try:
-                    self.cb_toggle_key.set(name)
-                    # store numeric VK and string label in parent config
-                    self.parent.config_data["toggle_key"] = name
-                    self.parent.config_data["toggle_vk"] = vk
-                    # ensure overlay in-memory var and label reflect the new VK
-                    try:
-                        if hasattr(self.parent, 'toggle_vk'):
-                            self.parent.toggle_vk = vk
-                        # UI label for Mon VK removed; no-op
-                    except Exception:
-                        pass
-                    cfg.save(self.parent.config_data)
-                    # update label
-                    try:
-                        self.lbl_toggle_vk.config(text=f"VK: {vk} (0x{vk:02X})")
-                    except Exception:
-                        pass
-                    self._on_toggle_key_change(None)
-                except Exception:
-                    pass
-                dlg.destroy()
-                return
-            dlg.after(10, loop_check)
-        dlg.after(50, loop_check)
-
-    def _detect_toggle_key(self):
-        dlg = tk.Toplevel(self)
-        dlg.title("Detect Key")
-        dlg.geometry("350x100")
-        dlg.attributes("-topmost", True)
-        name = self.parent.config_data.get("toggle_key", "`")
-        vk = int(self.parent.config_data.get("toggle_vk", 0) or 0)
-        lbl = tk.Label(dlg, text=f"Configured: {name} (VK: {vk})", font=("Segoe UI", 9))
-        lbl.pack(pady=6)
-        state_lbl = tk.Label(dlg, text="RELEASED", bg="#333", fg="#fff", font=("Consolas", 10))
-        state_lbl.pack(pady=6)
-        def check_state():
-            try:
-                if vk:
-                    pressed = (win32api.GetAsyncKeyState(int(vk)) & 0x8000) != 0
-                else:
-                    pressed = False
-                state_lbl.config(text="PRESSED" if pressed else "RELEASED", bg="#005500" if pressed else "#333")
-            except Exception:
-                state_lbl.config(text="ERROR")
-            dlg.after(50, check_state)
-        dlg.after(50, check_state)
-
-    def _on_toggle_key_change(self, event):
-        val = self.cb_toggle_key.get()
-        self.parent.config_data["toggle_key"] = val
-        # Save numeric VK if we can resolve it
-        try:
-            vk = inp.get_vk(val) or 0
-        except Exception:
-            vk = 0
-        self.parent.config_data["toggle_vk"] = vk
-        cfg.save(self.parent.config_data)
-        try:
-            if hasattr(self.parent, 'toggle_vk'):
-                self.parent.toggle_vk = vk
-                        # Mon VK label removed; no-op
-        except Exception:
-            pass
-
-    def _clear_toggle_vk(self):
-        # Reset saved toggle vk to zero so overlay will auto-detect it again
-        self.parent.config_data['toggle_vk'] = 0
-        self.parent.config_data['toggle_key'] = '`'
-        cfg.save(self.parent.config_data)
-        try:
-            if hasattr(self.parent, 'toggle_vk'):
-                self.parent.toggle_vk = 0
-            # Mon VK label removed; no-op
-        except Exception:
-            pass
-
-    def _debug_poll_toggle_key(self):
-        # Start a background thread to poll the key state and log raw values for a short period
-        def _poller():
-            vk = int(self.parent.config_data.get('toggle_vk', 0) or 0)
-            label = self.parent.config_data.get('toggle_key', '`')
-            self.parent._log_raw(f"[DEBUG] Starting key poll for {label} (VK: {vk})", "Warn")
-            candidate_vks = [vk, 223, 192, 222, 0xBA, 96, ord("'") if ord("'") < 256 else None]
-            # Deduplicate and remove None
-            candidate_vks = [v for idx, v in enumerate(candidate_vks) if v and v not in candidate_vks[:idx]]
-            for i in range(50):
-                try:
-                    # Check a couple of values: GetAsyncKeyState and GetKeyState for several candidate VKs
-                    async_raw = 0
-                    key_raw = 0
-                    for cv in candidate_vks:
-                        try:
-                            async_raw = win32api.GetAsyncKeyState(cv)
-                        except Exception:
-                            async_raw = 0
-                        try:
-                            key_raw = win32api.GetKeyState(cv)
-                        except Exception:
-                            key_raw = 0
-                        pressed = bool(async_raw & 0x8000)
-                        self.parent._log_raw(f"[DEBUG] i={i} cv={cv} async_raw=0x{async_raw:04X} key_raw=0x{key_raw:04X} pressed={pressed}", "Warn")
-                except Exception as e:
-                    self.parent._log_raw(f"[DEBUG] Error polling: {e}", "Warn")
-                time.sleep(0.05)
-            self.parent._log_raw("[DEBUG] Finished key poll", "Warn")
-        t = threading.Thread(target=_poller, daemon=True)
-        t.start()
-        # update label
-        try:
-            self.lbl_toggle_vk.config(text=f"VK: {vk} (0x{vk:02X})")
-        except Exception:
-            pass
-        # Let the overlay pick it up on next poll
-
-    def _get_branches(self, cwd=None):
-        try:
-            if not cwd: cwd = os.path.dirname(__file__)
-            result = subprocess.run(["git", "branch", "-r"], capture_output=True, text=True, cwd=cwd, creationflags=CREATE_NO_WINDOW)
-            if result.returncode == 0:
-                branches = []
-                for line in result.stdout.splitlines():
-                    l = line.strip()
-                    if not l or l.startswith("*"): continue
-                    if "->" in l:
-                        # Handle symbolic refs like 'origin/HEAD -> origin/beta'
-                        l = l.split("->")[-1].strip()
-                    if l.startswith("origin/"):
-                        l = l[len("origin/"):]
-                    # Trim out any remote prefix again
-                    if l.startswith("origin/"):
-                        l = l.replace("origin/", "")
-                    if l and l not in branches:
-                        branches.append(l)
-                # Ensure basic branches exist for UI convenience
-                for b in ["default", "beta"]:
-                    if b not in branches:
-                        branches.append(b)
-                return branches
-        except Exception as e:
-            print(f"Error getting branches: {e}")
-        # Provide sane defaults if branches couldn't be loaded
-        return ["default", "beta"]
 
     def _get_current_branch(self, cwd=None):
         try:
