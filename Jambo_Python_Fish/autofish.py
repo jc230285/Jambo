@@ -293,19 +293,25 @@ class FishingBotThread(threading.Thread):
         best_bobber = None
         best_score = 0
         
+        print(f"Total contours found: {len(contours)}")
+        
         for cnt in contours:
             area = cv2.contourArea(cnt)
             if area < 15:  # Too small
+                print(f"  Rejected: area {area:.1f} < 15")
                 continue
             if area > 500:  # Too large - probably detecting water/background
+                print(f"  Rejected: area {area:.1f} > 500")
                 continue
             
             x, y, w, h = cv2.boundingRect(cnt)
             
             # Reject if too wide or too flat (bobber should be tallish)
             if w > 100 or h > 100:
+                print(f"  Rejected: size {w}x{h} exceeds 100")
                 continue
             if w > h:  # Width should not exceed height for a bobber
+                print(f"  Rejected: width {w} > height {h} (not vertical)")
                 continue
             
             # Calculate how many bobber components are present in this region
@@ -320,12 +326,15 @@ class FishingBotThread(threading.Thread):
             # Count components (reduced threshold)
             component_count = (red_pixels > 3) + (blue_pixels > 3) + (cork_pixels > 3)
             
+            print(f"  Candidate: pos ({x},{y}) size {w}x{h}, area {area:.1f}, red={red_pixels} blue={blue_pixels} cork={cork_pixels}, components={component_count}")
+            
             # Prefer tall, narrow shapes (bobber is vertical)
             aspect_ratio = h / float(max(w, 1))
             
             # Combined score: prioritize having components + vertical shape
             # Lower requirement - accept 1+ components instead of 2+
             if component_count < 1:
+                print(f"    Rejected: no components found")
                 continue
             
             score = component_count * 100 + aspect_ratio * 10 + area * 0.5
