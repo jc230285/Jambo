@@ -673,76 +673,19 @@ class Overlay(tk.Tk):
     def _key_monitor_loop(self):
         # Dedicated thread to monitor the toggle key at higher frequency
         last_state = 0
-        vk = 0
-        prev_vk = None
-        # Short list of candidate VKs to check if configured VK doesn't respond
-        # Only grave/tilde key variants (192=0xC0 is the primary one)
-        # Excludes: 96=0x60 (NUMPAD0), 39=0x27 (RIGHT ARROW), etc.
-        CANDIDATE_VKS = [192, 0xC0]  # Just the grave key, no other candidates
-        CANDIDATE_VKS = [v for idx, v in enumerate(CANDIDATE_VKS) if v and v not in CANDIDATE_VKS[:idx]]
-        # Debounce map - count how many consecutive polls found the candidate pressed
-        detection_counters = {cv: 0 for cv in CANDIDATE_VKS}
-        DETECTION_THRESHOLD = 3
         while True:
             try:
-                # Re-resolve the configured key in case the user changed it
-                # Prefer numeric VK stored in config for reliability
-                vk = int(self.config_data.get("toggle_vk", 0) or 0)
-                if not vk:
-                    try:
-                        toggle_conf = self.config_data.get("toggle_key", "`")
-                        vk = inp.get_vk(toggle_conf) or 0
-                    except Exception:
-                        vk = 0
-                # Check the configured VK first
+                # Always use grave key (192 = 0xC0) - no auto-detection
+                vk = 192  # Grave/tilde key only
+                
                 # If a low-level hook is installed, don't use polling to toggle/pause
                 if self.hook_installed:
                     # keep reading but skip toggling/pause logic here
                     time.sleep(0.01)
                     continue
-                if vk:
-                    state = win32api.GetAsyncKeyState(vk) & 0x8000
-                else:
-                    state = 0
+                    
+                state = win32api.GetAsyncKeyState(vk) & 0x8000
                 
-                # Only scan candidate list if NO vk is configured (first-time setup)
-                # Do NOT scan if user has already set a toggle key
-                if not vk and not state:
-                    candidate_found = None
-                    candidate_state = 0
-                    for cv in CANDIDATE_VKS:
-                        try:
-                            st = win32api.GetAsyncKeyState(cv) & 0x8000
-                        except Exception:
-                            st = 0
-                        # Update debounce counter
-                        if st:
-                            detection_counters[cv] = detection_counters.get(cv, 0) + 1
-                        else:
-                            detection_counters[cv] = 0
-                        # If we detect a press, set as candidate for immediate toggling
-                        if st:
-                            candidate_found = cv
-                            candidate_state = st
-                            # If stable beyond threshold and saved VK is unset, commit to config
-                            if detection_counters[cv] >= DETECTION_THRESHOLD:
-                                try:
-                                    self.config_data['toggle_vk'] = cv
-                                    cfg.save(self.config_data)
-                                    vk = cv
-                                except Exception:
-                                    pass
-                            # Use candidate for this poll
-                            state = st
-                            break
-                # If the vk being monitored changed, update label once to the configured vk (RELEASED)
-                if vk != prev_vk:
-                    prev_vk = vk
-                    # update the UI label without debug log
-                    try:
-                        pass
-                    except Exception:
-                        pass
                 # rising edge -> toggle ability
                 if state and not last_state:
                     self.auto_ability = not self.auto_ability
@@ -758,12 +701,6 @@ class Overlay(tk.Tk):
                     except Exception:
                         pass
                 self.pause_targeting = bool(state)
-                # update monitored state label when state changes
-                try:
-                    if bool(state) != bool(last_state):
-                        pass
-                except Exception:
-                    pass
                 last_state = state
             except Exception:
                 pass
