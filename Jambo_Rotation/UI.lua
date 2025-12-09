@@ -918,41 +918,90 @@ function UI:CreateEditor(parent)
     ce.grpUnitTarget.nonPlayer = newCheck(ce.grpUnitTarget, "Non-Player")
     ce.grpUnitTarget.nonPlayer:SetPoint("TOPLEFT", 120, -160)
     
-    -- Attackable and Casting checkboxes
+    -- Attackable checkbox
     ce.grpUnitTarget.attackable = newCheck(ce.grpUnitTarget, "Attackable")
     ce.grpUnitTarget.attackable:SetPoint("TOPLEFT", 10, -190)
-    ce.grpUnitTarget.casting = newCheck(ce.grpUnitTarget, "Casting")
-    ce.grpUnitTarget.casting:SetPoint("TOPLEFT", 120, -190)
+    
+    -- Casting check with time remaining
+    ce.grpUnitTarget.castingChk = newCheck(ce.grpUnitTarget, "Casting")
+    ce.grpUnitTarget.castingChk:SetPoint("TOPLEFT", 10, -220)
+    
+    ce.grpUnitTarget.castOp = newDropdown(ce.grpUnitTarget, 60, "Op")
+    ce.grpUnitTarget.castOp:SetPoint("TOPLEFT", 100, -230)
+    
+    ce.grpUnitTarget.castVal = CreateFrame("EditBox", nil, ce.grpUnitTarget, "InputBoxTemplate")
+    ce.grpUnitTarget.castVal:SetSize(50, 20)
+    ce.grpUnitTarget.castVal:SetPoint("TOPLEFT", 170, -227)
+    ce.grpUnitTarget.castVal:SetAutoFocus(false)
+    ce.grpUnitTarget.castVal:SetNumeric(true)
+    ce.grpUnitTarget.castVal:SetMaxLetters(4)
+    
+    local castLbl = ce.grpUnitTarget:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    castLbl:SetPoint("LEFT", ce.grpUnitTarget.castVal, "RIGHT", 5, 0)
+    castLbl:SetText("sec")
+    
+    -- Channeling check with time remaining
+    ce.grpUnitTarget.channelingChk = newCheck(ce.grpUnitTarget, "Channeling")
+    ce.grpUnitTarget.channelingChk:SetPoint("TOPLEFT", 10, -250)
+    
+    ce.grpUnitTarget.chanOp = newDropdown(ce.grpUnitTarget, 60, "Op")
+    ce.grpUnitTarget.chanOp:SetPoint("TOPLEFT", 110, -260)
+    
+    ce.grpUnitTarget.chanVal = CreateFrame("EditBox", nil, ce.grpUnitTarget, "InputBoxTemplate")
+    ce.grpUnitTarget.chanVal:SetSize(50, 20)
+    ce.grpUnitTarget.chanVal:SetPoint("TOPLEFT", 180, -257)
+    ce.grpUnitTarget.chanVal:SetAutoFocus(false)
+    ce.grpUnitTarget.chanVal:SetNumeric(true)
+    ce.grpUnitTarget.chanVal:SetMaxLetters(4)
+    
+    local chanLbl = ce.grpUnitTarget:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    chanLbl:SetPoint("LEFT", ce.grpUnitTarget.chanVal, "RIGHT", 5, 0)
+    chanLbl:SetText("sec")
     
     -- Range check with operator and value
     ce.grpUnitTarget.rangeChk = newCheck(ce.grpUnitTarget, "Range Check")
-    ce.grpUnitTarget.rangeChk:SetPoint("TOPLEFT", 10, -220)
+    ce.grpUnitTarget.rangeChk:SetPoint("TOPLEFT", 10, -280)
     
     ce.grpUnitTarget.rangeOp = newDropdown(ce.grpUnitTarget, 60, "Op")
-    ce.grpUnitTarget.rangeOp:SetPoint("TOPLEFT", 120, -230)
+    ce.grpUnitTarget.rangeOp:SetPoint("TOPLEFT", 120, -290)
     
     ce.grpUnitTarget.rangeVal = CreateFrame("EditBox", nil, ce.grpUnitTarget, "InputBoxTemplate")
     ce.grpUnitTarget.rangeVal:SetSize(50, 20)
-    ce.grpUnitTarget.rangeVal:SetPoint("TOPLEFT", 190, -227)
+    ce.grpUnitTarget.rangeVal:SetPoint("TOPLEFT", 190, -287)
     ce.grpUnitTarget.rangeVal:SetAutoFocus(false)
     ce.grpUnitTarget.rangeVal:SetNumeric(true)
     ce.grpUnitTarget.rangeVal:SetMaxLetters(3)
     
+    -- Role check
+    ce.grpUnitTarget.roleChk = newCheck(ce.grpUnitTarget, "Check Role")
+    ce.grpUnitTarget.roleChk:SetPoint("TOPLEFT", 10, -310)
+    ce.grpUnitTarget.roleType = newDropdown(ce.grpUnitTarget, 120, "Role")
+    ce.grpUnitTarget.roleType:SetPoint("TOPLEFT", 120, -320)
+    
     -- Class check
     ce.grpUnitTarget.classChk = newCheck(ce.grpUnitTarget, "Check Class")
-    ce.grpUnitTarget.classChk:SetPoint("TOPLEFT", 10, -250)
+    ce.grpUnitTarget.classChk:SetPoint("TOPLEFT", 10, -350)
     ce.grpUnitTarget.classType = newDropdown(ce.grpUnitTarget, 120, "Class")
-    ce.grpUnitTarget.classType:SetPoint("TOPLEFT", 120, -260)
+    ce.grpUnitTarget.classType:SetPoint("TOPLEFT", 120, -360)
     
     -- Unit type multiselect
     ce.grpUnitTarget.unitTypeChk = newCheck(ce.grpUnitTarget, "Unit Type")
-    ce.grpUnitTarget.unitTypeChk:SetPoint("TOPLEFT", 10, -290)
-    ce.grpUnitTarget.unitTypeList = newDropdown(ce.grpUnitTarget, 120, "Type")
-    ce.grpUnitTarget.unitTypeList:SetPoint("TOPLEFT", 120, -300)
+    ce.grpUnitTarget.unitTypeChk:SetPoint("TOPLEFT", 10, -390)
+    
+    -- Create checkboxes for unit types
+    ce.grpUnitTarget.unitTypeBoxes = {}
+    local unitTypes = {"Humanoid", "Beast", "Critter", "Demon", "Undead", "Dragonkin", "Elemental", "Giant", "Mechanical"}
+    for i, typeName in ipairs(unitTypes) do
+        local chk = newCheck(ce.grpUnitTarget, typeName)
+        local row = math.floor((i - 1) / 3)
+        local col = (i - 1) % 3
+        chk:SetPoint("TOPLEFT", 120 + col * 110, -400 - row * 25)
+        ce.grpUnitTarget.unitTypeBoxes[typeName] = chk
+    end
     
     -- Debug label
     ce.grpUnitTarget.debugLbl = ce.grpUnitTarget:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    ce.grpUnitTarget.debugLbl:SetPoint("TOPLEFT", 10, -330)
+    ce.grpUnitTarget.debugLbl:SetPoint("TOPLEFT", 10, -480)
     ce.grpUnitTarget.debugLbl:SetText("Debug: No unit selected")
     ce.grpUnitTarget.debugLbl:SetJustifyH("LEFT")
     ce.grpUnitTarget.debugLbl:SetWidth(400)
@@ -1660,11 +1709,19 @@ function UI:EditCondition(idx)
         c.isPlayer = c.isPlayer or false
         c.nonPlayer = c.nonPlayer or false
         c.attackable = c.attackable or false
-        c.casting = c.casting or false
+        c.checkCasting = c.checkCasting or false
+        c.castOp = c.castOp or "<="
+        c.castVal = c.castVal or 0
+        c.checkChanneling = c.checkChanneling or false
+        c.chanOp = c.chanOp or "<="
+        c.chanVal = c.chanVal or 0
         c.checkRange = c.checkRange or false
+        c.rangeOp = c.rangeOp or "<="
         c.rangeVal = c.rangeVal or 30
         c.checkClass = c.checkClass or false
         c.classType = c.classType or "Warrior"
+        c.checkRole = c.checkRole or false
+        c.roleType = c.roleType or "DAMAGER"
         c.checkUnitType = c.checkUnitType or false
         c.unitTypes = c.unitTypes or {}
         
@@ -1759,10 +1816,47 @@ function UI:EditCondition(idx)
             c.attackable = ce.grpUnitTarget.attackable:GetChecked()
         end)
         
-        ce.grpUnitTarget.casting:SetChecked(c.casting)
-        ce.grpUnitTarget.casting:SetScript("OnClick", function()
-            c.casting = ce.grpUnitTarget.casting:GetChecked()
+        -- Casting check with time
+        c.checkCasting = c.checkCasting or false
+        c.castOp = c.castOp or "<="
+        c.castVal = c.castVal or 0
+        
+        ce.grpUnitTarget.castingChk:SetChecked(c.checkCasting)
+        ce.grpUnitTarget.castingChk:SetScript("OnClick", function()
+            c.checkCasting = ce.grpUnitTarget.castingChk:GetChecked()
+            ce.grpUnitTarget.castOp:SetShown(c.checkCasting)
+            ce.grpUnitTarget.castVal:SetShown(c.checkCasting)
         end)
+        
+        setDropdownOptions(ce.grpUnitTarget.castOp, c.castOp, opOptions())
+        ce.grpUnitTarget.castOp:SetShown(c.checkCasting)
+        
+        ce.grpUnitTarget.castVal:SetText(tostring(c.castVal or 0))
+        ce.grpUnitTarget.castVal:SetScript("OnTextChanged", function(self)
+            c.castVal = tonumber(self:GetText()) or 0
+        end)
+        ce.grpUnitTarget.castVal:SetShown(c.checkCasting)
+        
+        -- Channeling check with time
+        c.checkChanneling = c.checkChanneling or false
+        c.chanOp = c.chanOp or "<="
+        c.chanVal = c.chanVal or 0
+        
+        ce.grpUnitTarget.channelingChk:SetChecked(c.checkChanneling)
+        ce.grpUnitTarget.channelingChk:SetScript("OnClick", function()
+            c.checkChanneling = ce.grpUnitTarget.channelingChk:GetChecked()
+            ce.grpUnitTarget.chanOp:SetShown(c.checkChanneling)
+            ce.grpUnitTarget.chanVal:SetShown(c.checkChanneling)
+        end)
+        
+        setDropdownOptions(ce.grpUnitTarget.chanOp, c.chanOp, opOptions())
+        ce.grpUnitTarget.chanOp:SetShown(c.checkChanneling)
+        
+        ce.grpUnitTarget.chanVal:SetText(tostring(c.chanVal or 0))
+        ce.grpUnitTarget.chanVal:SetScript("OnTextChanged", function(self)
+            c.chanVal = tonumber(self:GetText()) or 0
+        end)
+        ce.grpUnitTarget.chanVal:SetShown(c.checkChanneling)
         
         -- Range check
         c.rangeOp = c.rangeOp or "<="
@@ -1807,26 +1901,66 @@ function UI:EditCondition(idx)
         })
         ce.grpUnitTarget.classType:SetShown(c.checkClass)
         
-        -- Unit type check
+        -- Role check
+        c.checkRole = c.checkRole or false
+        c.roleType = c.roleType or "DAMAGER"
+        
+        ce.grpUnitTarget.roleChk:SetChecked(c.checkRole)
+        ce.grpUnitTarget.roleChk:SetScript("OnClick", function()
+            c.checkRole = ce.grpUnitTarget.roleChk:GetChecked()
+            ce.grpUnitTarget.roleType:SetShown(c.checkRole)
+        end)
+        
+        setDropdownOptions(ce.grpUnitTarget.roleType, c.roleType, {
+            { text = "Tank", value = "TANK", onSelect = function(val) c.roleType = val end },
+            { text = "DPS", value = "DAMAGER", onSelect = function(val) c.roleType = val end },
+            { text = "Healer", value = "HEALER", onSelect = function(val) c.roleType = val end },
+        })
+        ce.grpUnitTarget.roleType:SetShown(c.checkRole)
+        
+        -- Unit type check (multiselect with checkboxes)
+        c.unitTypes = c.unitTypes or {}
+        
         ce.grpUnitTarget.unitTypeChk:SetChecked(c.checkUnitType)
         ce.grpUnitTarget.unitTypeChk:SetScript("OnClick", function()
             c.checkUnitType = ce.grpUnitTarget.unitTypeChk:GetChecked()
-            ce.grpUnitTarget.unitTypeList:SetShown(c.checkUnitType)
+            for _, chk in pairs(ce.grpUnitTarget.unitTypeBoxes) do
+                chk:SetShown(c.checkUnitType)
+            end
         end)
         
-        -- For now, simple dropdown (could be enhanced to multiselect later)
-        local selectedType = c.unitTypes and c.unitTypes[1] or "Humanoid"
-        setDropdownOptions(ce.grpUnitTarget.unitTypeList, selectedType, {
-            { text = "Humanoid", value = "Humanoid", onSelect = function(val) c.unitTypes = {val} end },
-            { text = "Beast", value = "Beast", onSelect = function(val) c.unitTypes = {val} end },
-            { text = "Dragon", value = "Dragon", onSelect = function(val) c.unitTypes = {val} end },
-            { text = "Demon", value = "Demon", onSelect = function(val) c.unitTypes = {val} end },
-            { text = "Elemental", value = "Elemental", onSelect = function(val) c.unitTypes = {val} end },
-            { text = "Giant", value = "Giant", onSelect = function(val) c.unitTypes = {val} end },
-            { text = "Undead", value = "Undead", onSelect = function(val) c.unitTypes = {val} end },
-            { text = "Mechanical", value = "Mechanical", onSelect = function(val) c.unitTypes = {val} end },
-        })
-        ce.grpUnitTarget.unitTypeList:SetShown(c.checkUnitType)
+        -- Initialize unit type checkboxes
+        for typeName, chk in pairs(ce.grpUnitTarget.unitTypeBoxes) do
+            local isChecked = false
+            for _, t in ipairs(c.unitTypes) do
+                if t == typeName then
+                    isChecked = true
+                    break
+                end
+            end
+            chk:SetChecked(isChecked)
+            chk:SetScript("OnClick", function()
+                local checked = chk:GetChecked()
+                if checked then
+                    -- Add to list if not already there
+                    local found = false
+                    for _, t in ipairs(c.unitTypes) do
+                        if t == typeName then found = true; break end
+                    end
+                    if not found then
+                        table.insert(c.unitTypes, typeName)
+                    end
+                else
+                    -- Remove from list
+                    for i = #c.unitTypes, 1, -1 do
+                        if c.unitTypes[i] == typeName then
+                            table.remove(c.unitTypes, i)
+                        end
+                    end
+                end
+            end)
+            chk:SetShown(c.checkUnitType)
+        end
         
         -- Initialize debug display
         UI:UpdateUnitTargetDebug(c)

@@ -462,11 +462,52 @@ function E:CheckUnitTarget(c)
         if not UnitCanAttack("player", unit) then return false, "NotAttackable" end
     end
 
-    -- Casting check
-    if c.casting then
+    -- Casting check with optional time remaining check
+    if c.checkCasting then
         local spell, _, _, _, endTime = UnitCastingInfo(unit)
-        local channeled, _, _, _, endTime2 = UnitChannelInfo(unit)
-        if not spell and not channeled then return false, "NotCasting" end
+        if not spell then
+            return false, "NotCasting"
+        end
+        
+        -- Check cast time remaining if operator and value are set
+        if c.castOp and c.castVal then
+            local remaining = (endTime / 1000) - GetTime()
+            local pass = false
+            if c.castOp == "<=" then pass = remaining <= c.castVal
+            elseif c.castOp == "<" then pass = remaining < c.castVal
+            elseif c.castOp == ">=" then pass = remaining >= c.castVal
+            elseif c.castOp == ">" then pass = remaining > c.castVal
+            elseif c.castOp == "==" then pass = math.abs(remaining - c.castVal) < 0.1
+            end
+            
+            if not pass then
+                return false, string.format("Cast:%.1fs%s%.1f", remaining, c.castOp, c.castVal)
+            end
+        end
+    end
+    
+    -- Channeling check with optional time remaining check
+    if c.checkChanneling then
+        local spell, _, _, _, endTime = UnitChannelInfo(unit)
+        if not spell then
+            return false, "NotChanneling"
+        end
+        
+        -- Check channel time remaining if operator and value are set
+        if c.chanOp and c.chanVal then
+            local remaining = (endTime / 1000) - GetTime()
+            local pass = false
+            if c.chanOp == "<=" then pass = remaining <= c.chanVal
+            elseif c.chanOp == "<" then pass = remaining < c.chanVal
+            elseif c.chanOp == ">=" then pass = remaining >= c.chanVal
+            elseif c.chanOp == ">" then pass = remaining > c.chanVal
+            elseif c.chanOp == "==" then pass = math.abs(remaining - c.chanVal) < 0.1
+            end
+            
+            if not pass then
+                return false, string.format("Chan:%.1fs%s%.1f", remaining, c.chanOp, c.chanVal)
+            end
+        end
     end
 
     -- Range check
@@ -516,6 +557,21 @@ function E:CheckUnitTarget(c)
         local _, unitClass = UnitClass(unit)
         if unitClass ~= string.upper(c.classType or "WARRIOR") then 
             return false, "Class:" .. (unitClass or "unknown") 
+        end
+    end
+    
+    -- Role check
+    if c.checkRole then
+        local role = UnitGroupRolesAssigned and UnitGroupRolesAssigned(unit) or "NONE"
+        local expectedRole = string.upper(c.roleType or "DAMAGER")
+        -- Map display names to API values
+        if expectedRole == "TANK" then expectedRole = "TANK"
+        elseif expectedRole == "DPS" or expectedRole == "DAMAGER" then expectedRole = "DAMAGER"
+        elseif expectedRole == "HEALER" then expectedRole = "HEALER"
+        end
+        
+        if role ~= expectedRole then
+            return false, "Role:" .. (role or "NONE")
         end
     end
 
