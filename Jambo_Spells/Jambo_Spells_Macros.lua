@@ -131,7 +131,7 @@ function J:ScanBagsForMacros()
         end
         local f = fInfo.name
         local w = wInfo.name
-        J:UpdateMacro("Feast", "#showtooltip " .. f .. "\n/use " .. f .. "\n/use " .. w, itemIcon)
+        J:UpdateMacro("AutoFeast", "#showtooltip " .. f .. "\n/use " .. f .. "\n/use " .. w, itemIcon)
     end
 
     if #bandages > 0 then
@@ -178,6 +178,26 @@ end
 function J:CreateUtilityMacros()
     if InCombatLockdown() then return end
     
+    -- Check if wand is equipped in ranged slot (slot 18)
+    local hasWand = false
+    local itemLink = GetInventoryItemLink("player", 18)
+    if itemLink then
+        local _, _, _, _, _, _, _, _, equipSlot = GetItemInfo(itemLink)
+        if equipSlot == "INVTYPE_RANGED" or equipSlot == "INVTYPE_RANGEDRIGHT" then
+            hasWand = true
+        end
+    end
+    
+    -- Dynamic AutoAttack based on wand presence
+    local autoAttackBody, autoAttackIcon
+    if hasWand then
+        autoAttackBody = "#showtooltip 18\n/cleartarget [dead]\n/targetenemy [noexists]\n/castsequence [harm,nodead] reset=2 !Shoot, null"
+        autoAttackIcon = "135463"  -- Wand icon
+    else
+        autoAttackBody = "#showtooltip 16\n/cleartarget [dead]\n/startattack [harm,nodead]\n/targetenemy [noexists]"
+        autoAttackIcon = "132349"  -- Melee attack icon
+    end
+    
     local macros = {
         {"DrinkWater", "132794", "#showtooltip item:159\n/use item:159"}, 
         {"Feast", "132794", "#showtooltip item:117\n/use item:117\n/use item:159"},
@@ -194,7 +214,7 @@ function J:CreateUtilityMacros()
         {"Reload", "132096", "/reload"},
         {"Roll", "252184", "/roll"},
         {"AutoShoot", "132329", "#showtooltip Shoot\n/castsequence [harm] reset=2 !Shoot, null\n/castsequence [help,target=targettarget] reset=2 !Shoot, null"},
-        {"AutoAttack", "132349", "#showtooltip 16\n/cleartarget [dead]\n/startattack [harm,nodead]\n/targetenemy [noexists]"},
+        {"AutoAttack", autoAttackIcon, autoAttackBody},
         {"T1", "134400", "#showtooltip 13\n/use 13"},
         {"T2", "134400", "#showtooltip 14\n/use 14"},
     }
