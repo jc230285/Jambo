@@ -469,7 +469,7 @@ function UI:RefreshPicker(skipBuild)
     UI.pickerList = {}
     local seen = {}
     for _, d in pairs(NS.Book) do
-        if d and (d.type == "SPELL" or d.type == "MACRO") and type(d.name) == "string" and not d.name:find("_") then
+        if d and (d.type == "SPELL" or d.type == "MACRO" or d.type == "ITEM") and type(d.name) == "string" and not d.name:find("_") then
             local key = (d.type or "") .. ":" .. d.name
             if not seen[key] then
                 seen[key] = true
@@ -486,7 +486,7 @@ function UI:RefreshPicker(skipBuild)
             local d = UI.pickerList[idx]
             row.dataName = d.name
             local color = "|cffffffff"
-            if d.type == "ITEM" then color = "|cff00ff00" elseif d.type == "MACRO" then color = "|cffffa500" end
+            if d.type == "ITEM" then color = "|cff0099ff" elseif d.type == "MACRO" then color = "|cffffa500" end
             row.txt:SetText(color .. "|T" .. (d.icon or "Interface\\Icons\\INV_Misc_QuestionMark") .. ":14|t " .. d.name .. "|r")
             row.meta:SetText(d.type == "MACRO" and "Macro" or ("Slot " .. (d.slot or 0)))
             row:Show()
@@ -1504,7 +1504,7 @@ function UI:EditCondition(idx)
         local itemData = c.itemName and NS.Book[c.itemName]
         if itemData then
             local itemCount = GetItemCount(itemData.id, c.includeCharges)
-            local start, duration = GetItemCooldown(itemData.id)
+            local start, duration = C_Container.GetItemCooldown(itemData.id)
             local cd = (duration and duration > 0) and ((start + duration) - GetTime()) or 0
             ce.grpItem.info:SetText(string.format("Count: %d | CD: %.1fs", itemCount, cd))
         else
@@ -2197,7 +2197,7 @@ function UI:RefreshPicker(skipBuild)
     UI.pickerList = {}
     local seen = {}
     for _, d in pairs(NS.Book) do
-        if d and (d.type == "SPELL" or d.type == "MACRO") and type(d.name) == "string" and not d.name:find("_") then
+        if d and (d.type == "SPELL" or d.type == "MACRO" or d.type == "ITEM") and type(d.name) == "string" and not d.name:find("_") then
             local key = (d.type or "") .. ":" .. d.name
             if not seen[key] then
                 seen[key] = true
@@ -2214,7 +2214,7 @@ function UI:RefreshPicker(skipBuild)
             local d = UI.pickerList[idx]
             row.dataName = d.name
             local color = "|cffffffff"
-            if d.type == "ITEM" then color = "|cff00ff00" elseif d.type == "MACRO" then color = "|cffffa500" end
+            if d.type == "ITEM" then color = "|cff0099ff" elseif d.type == "MACRO" then color = "|cffffa500" end
             row.txt:SetText(color .. "|T" .. (d.icon or "Interface\\Icons\\INV_Misc_QuestionMark") .. ":14|t " .. d.name .. "|r")
             row.meta:SetText(d.type == "MACRO" and "Macro" or ("Slot " .. (d.slot or 0)))
             row:Show()
