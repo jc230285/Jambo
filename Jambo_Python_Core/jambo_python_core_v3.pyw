@@ -504,19 +504,9 @@ class Overlay(tk.Tk):
         
         self.bind("<ButtonPress-1>", self._start_move); self.bind("<B1-Motion>", self._do_move); self.bind("<ButtonRelease-1>", self._stop_move)
         self._build_overlay_ui(); self._load_bindings()
-        # Check for updates on startup - print to console only, don't spam UI
-        try:
-            addon_dir = get_addon_install_dir(self.config_data.get('root_dir', ''))
-            print(f"[AUTO] Checking addon GitHub for updates...")
-            print(f"[AUTO] Addon install directory: {addon_dir}")
-            print(f"[AUTO] Downloading latest addon version...")
-            if ensure_repo(addon_dir, force_install=True, log_fn=None):
-                print("[AUTO] Addon updated successfully!")
-            else:
-                print("[AUTO] Addon update failed")
-        except Exception as e:
-            print(f"[AUTO] Update check failed: {e}")
         self.after(100, self._refresh_loop)
+        # Check for updates after UI has loaded
+        self.after(1000, self._check_updates_on_startup)
         print("Overlay window created successfully")
 
     def _build_overlay_ui(self):
@@ -639,6 +629,25 @@ class Overlay(tk.Tk):
         self.txt_log.config(state="normal"); self.txt_log.insert("end", text + "\n", tag)
         if int(self.txt_log.index('end-1c').split('.')[0]) > 6: self.txt_log.delete("1.0", "2.0")
         self.txt_log.see("end"); self.txt_log.config(state="disabled")
+
+    def _check_updates_on_startup(self):
+        """Check for updates after UI has loaded - runs in background."""
+        def _check():
+            try:
+                addon_dir = get_addon_install_dir(self.config_data.get('root_dir', ''))
+                print(f"[AUTO] Checking addon GitHub for updates...")
+                print(f"[AUTO] Addon install directory: {addon_dir}")
+                print(f"[AUTO] Downloading latest addon version...")
+                if ensure_repo(addon_dir, force_install=True, log_fn=None):
+                    print("[AUTO] Addon updated successfully!")
+                    self._log_raw("[AUTO] Addon updated on startup", "Warn")
+                else:
+                    print("[AUTO] Addon update failed")
+            except Exception as e:
+                print(f"[AUTO] Update check failed: {e}")
+        # Run in background thread so it doesn't block UI
+        t = threading.Thread(target=_check, daemon=True)
+        t.start()
 
     def _auto_update_loop(self):
         while True:
