@@ -174,8 +174,54 @@ function JG:GetItemInfo(itemLink)
     if not itemName then return nil end
     local equipSlot = self:GetEquipSlotFromLocation(itemEquipLoc)
     if not equipSlot then return nil end
+    
+    -- Check if player can use this item type
+    if not self:CanUseItem(itemType, itemSubType) then return nil end
+    
     local stats = {}; if GetItemStats then stats = GetItemStats(itemLink) or {} end
     return { link = itemLink, name = itemName, quality = itemQuality, level = itemLevel, equipSlot = equipSlot, invType = itemEquipLoc, stats = stats, texture = itemTexture, type = itemType, subtype = itemSubType }
+end
+
+function JG:CanUseItem(itemType, itemSubType)
+    if itemType ~= "Armor" and itemType ~= "Weapon" then return true end
+    
+    -- Armor type restrictions
+    if itemType == "Armor" then
+        local _, playerClass = UnitClass("player")
+        local armorTypes = {
+            WARRIOR = {Plate=true, Mail=true, Leather=true, Cloth=true, Shield=true},
+            PALADIN = {Plate=true, Mail=true, Leather=true, Cloth=true, Shield=true},
+            HUNTER = {Mail=true, Leather=true, Cloth=true},
+            ROGUE = {Leather=true, Cloth=true},
+            PRIEST = {Cloth=true},
+            SHAMAN = {Mail=true, Leather=true, Cloth=true, Shield=true},
+            MAGE = {Cloth=true},
+            WARLOCK = {Cloth=true},
+            DRUID = {Leather=true, Cloth=true}
+        }
+        local allowed = armorTypes[playerClass]
+        if allowed and not allowed[itemSubType] then return false end
+    end
+    
+    -- Weapon type restrictions
+    if itemType == "Weapon" then
+        local _, playerClass = UnitClass("player")
+        local weaponTypes = {
+            WARRIOR = {["One-Handed Swords"]=true, ["Two-Handed Swords"]=true, ["One-Handed Maces"]=true, ["Two-Handed Maces"]=true, ["One-Handed Axes"]=true, ["Two-Handed Axes"]=true, Daggers=true, Polearms=true, Staves=true, Bows=true, Crossbows=true, Guns=true, Thrown=true, Fist=true},
+            PALADIN = {["One-Handed Swords"]=true, ["Two-Handed Swords"]=true, ["One-Handed Maces"]=true, ["Two-Handed Maces"]=true, ["One-Handed Axes"]=true, ["Two-Handed Axes"]=true, Polearms=true},
+            HUNTER = {["One-Handed Swords"]=true, ["Two-Handed Swords"]=true, ["One-Handed Axes"]=true, ["Two-Handed Axes"]=true, Daggers=true, Polearms=true, Staves=true, Bows=true, Crossbows=true, Guns=true, Fist=true},
+            ROGUE = {["One-Handed Swords"]=true, Daggers=true, ["One-Handed Maces"]=true, Fist=true, Bows=true, Crossbows=true, Guns=true, Thrown=true},
+            PRIEST = {["One-Handed Maces"]=true, Daggers=true, Staves=true, Wands=true},
+            SHAMAN = {["One-Handed Maces"]=true, ["Two-Handed Maces"]=true, ["One-Handed Axes"]=true, ["Two-Handed Axes"]=true, Daggers=true, Staves=true, Fist=true},
+            MAGE = {["One-Handed Swords"]=true, Daggers=true, Staves=true, Wands=true},
+            WARLOCK = {["One-Handed Swords"]=true, Daggers=true, Staves=true, Wands=true},
+            DRUID = {["One-Handed Maces"]=true, ["Two-Handed Maces"]=true, Daggers=true, Staves=true, Polearms=true, Fist=true}
+        }
+        local allowed = weaponTypes[playerClass]
+        if allowed and not allowed[itemSubType] then return false end
+    end
+    
+    return true
 end
 
 function JG:GetEquipSlotFromLocation(invType)

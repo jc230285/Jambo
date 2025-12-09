@@ -58,7 +58,7 @@ local function UpdateDebugInfo()
     if not UnitExists("target") then
         local noTargetText = "No target selected\n\nTarget an enemy to see range data."
         info:SetText(noTargetText)
-        info:SetHeight(info:GetStringHeight() + 20)
+        info:SetHeight(100)
         return
     end
     
@@ -251,7 +251,7 @@ local function UpdateDebugInfo()
     
     local text = table.concat(lines, "\n")
     info:SetText(text)
-    info:SetHeight(info:GetStringHeight() + 20)
+    info:SetHeight(2000)
 end
 
 -- Update every frame
