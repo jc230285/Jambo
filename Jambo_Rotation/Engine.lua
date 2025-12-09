@@ -210,19 +210,43 @@ function E:CheckSpellCond(c, step)
         end
         
         -- inRange: 1=in range, 0=out of range, nil=no range limit
+        local rangeStatus = "?"
+        if inRange == 1 then rangeStatus = "IN"
+        elseif inRange == 0 then rangeStatus = "OUT"
+        else rangeStatus = "NIL" end
+        
         -- If spell has a range and we're out of range, fail
         if inRange == 0 and data.range and data.range > 0 then 
-            return false, "OutOfRange" 
+            return false, "OutOfRange(max:" .. data.range .. ")" 
         end
         -- If inRange is nil but spell has a range, assume out of range to be safe
         if inRange == nil and data.range and data.range > 0 then
-            return false, "Range?" 
+            return false, "Range?(" .. rangeStatus .. ",max:" .. data.range .. ")" 
         end
     end
 
     local parts = {}
     table.insert(parts, "CD:" .. Utils.FormatVal(cd))
     if charges and charges >= 0 then table.insert(parts, "Chg:" .. Utils.FormatVal(charges)) end
+    
+    -- Add range check status if enabled
+    if c.chkRange then
+        local unit = c.rangeUnit or "target"
+        if UnitExists(unit) then
+            local inRange = nil
+            if data.slot and data.slot > 0 then
+                inRange = IsActionInRange(data.slot, unit)
+            else
+                inRange = IsSpellInRange(data.name, unit)
+            end
+            local rangeStr = "?"
+            if inRange == 1 then rangeStr = "IN"
+            elseif inRange == 0 then rangeStr = "OUT"
+            else rangeStr = "NIL" end
+            table.insert(parts, "RngChk:" .. rangeStr)
+        end
+    end
+    
     return true, table.concat(parts, " ")
 end
 
