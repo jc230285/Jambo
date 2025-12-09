@@ -64,7 +64,13 @@ class FishingBotThread(threading.Thread):
             self.running = False
         # Bobber history for training (list of dicts)
         self.history_file = self.config.get('history_file', 'bobber_history.json')
+        self.bobber_dir = self.config.get('bobber_dir', 'bobbers')
         self.bobber_history = []
+        # Ensure bobber directory exists
+        try:
+            os.makedirs(self.bobber_dir, exist_ok=True)
+        except Exception:
+            pass
         # load existing history if present
         try:
             if os.path.exists(self.history_file):
@@ -95,14 +101,38 @@ class FishingBotThread(threading.Thread):
                     continue
                 
                 self.update_log(f"Bobber found at {bobber_loc}")
-                # record detection into history
+                # record detection into history and save cropped bobber image
                 try:
-                    entry = {"ts": time.time(), "x": bobber_loc[0], "y": bobber_loc[1], "confidence": confidence}
+                    ts = time.time()
+                    idx = len(self.bobber_history)
+                    img_filename = f"bobber_{idx:05d}_{int(ts)}.png"
+                    entry = {
+                        "ts": ts, 
+                        "x": bobber_loc[0], 
+                        "y": bobber_loc[1], 
+                        "confidence": confidence,
+                        "image": img_filename
+                    }
                     self.bobber_history.append(entry)
-                    # persist
+                    
+                    # Save cropped bobber image (60x60 region around detected center)
+                    try:
+                        crop_size = 60
+                        left = int(bobber_loc[0] - crop_size // 2)
+                        top = int(bobber_loc[1] - crop_size // 2)
+                        monitor = {"top": top, "left": left, "width": crop_size, "height": crop_size}
+                        with mss.mss() as sct:
+                            crop_img = np.array(sct.grab(monitor))
+                        crop_bgr = cv2.cvtColor(crop_img, cv2.COLOR_BGRA2BGR)
+                        img_path = os.path.join(self.bobber_dir, img_filename)
+                        cv2.imwrite(img_path, crop_bgr)
+                    except Exception as e:
+                        print(f"Failed to save bobber crop: {e}")
+                    
+                    # persist JSON
                     try:
                         with open(self.history_file, 'w') as hf:
-                            json.dump(self.bobber_history, hf)
+                            json.dump(self.bobber_history, hf, indent=2)
                     except Exception:
                         pass
                 except Exception:
