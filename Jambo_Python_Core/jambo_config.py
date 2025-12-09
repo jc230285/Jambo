@@ -15,6 +15,7 @@ DEFAULT_CONFIG = {
     "window_y": 50,
     "toggle_key": "`",
     "toggle_vk": 192,  # 0xC0 - grave/tilde key
+    "pos": [4, 0]  # Default square position [row, col]
 }
 
 def load():

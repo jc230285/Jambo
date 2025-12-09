@@ -739,14 +739,8 @@ class Overlay(tk.Tk):
                             prev = self._hook_last_state.get(vk, False)
                             if not prev:
                                 # rising edge, handle toggle and pause
-                                try:
-                                    # Determine whether this vk should be considered the toggle key
-                                    saved_vk = int(self.config_data.get('toggle_vk', 0) or 0)
-                                except Exception:
-                                    saved_vk = 0
-                                # Candidate list similar to polling list
-                                CANDIDATE_VKS = [223, 0xC0, 192, 222, 0xBA, 0xDF, ord('`'), 96]
-                                if (saved_vk and vk == saved_vk) or (saved_vk == 0 and vk in CANDIDATE_VKS):
+                                # Only grave key (192 = 0xC0) - no auto-detection
+                                if vk == 192:
                                     # toggle ability on keydown
                                     self.auto_ability = not self.auto_ability
                                     # force auto target off
@@ -762,9 +756,8 @@ class Overlay(tk.Tk):
                         elif wParam == WM_KEYUP or wParam == WM_SYSKEYUP:
                             # Key released
                             self._hook_last_state[vk] = False
-                            saved_vk = int(self.config_data.get('toggle_vk', 0) or 0)
-                            CANDIDATE_VKS = [223, 0xC0, 192, 222, 0xBA, 0xDF, ord('`'), 96]
-                            if (saved_vk and vk == saved_vk) or (vk in CANDIDATE_VKS):
+                            # Only grave key (192 = 0xC0)
+                            if vk == 192:
                                 self.pause_targeting = False
                 except Exception:
                     pass
