@@ -52,6 +52,9 @@ info:SetScript("OnEscapePressed", function() info:ClearFocus() end)
 -- Test spell data - one spell per range breakpoint per class
 -- Excludes: Point-blank AoE spells (Frost Nova, Arcane Explosion, etc.)
 local TEST_SPELLS = {
+    -- Melee range test
+    {name = "Attack", range = 5, class = "ALL"},
+    
     -- Mage
     {name = "Fire Blast", range = 20, class = "MAGE"},
     {name = "Frostbolt", range = 30, class = "MAGE"},
@@ -431,6 +434,9 @@ local function UpdateDebugInfo()
     table.insert(lines, "|cffffff00These don't target enemies, so return nil|r")
     table.insert(lines, "")
     table.insert(lines, "Recommended Code:")
+    table.insert(lines, "|cffaaaaaa-- For melee range (5 yards)|r")
+    table.insert(lines, "|cffaaaaaalocal inMelee = IsSpellInRange('Attack', 'target') == 1|r")
+    table.insert(lines, "")
     table.insert(lines, "|cffaaaaaa-- For 20-yard spells (Fire Blast)|r")
     table.insert(lines, "|cffaaaaaalocal in20 = IsSpellInRange('Fire Blast', 'target') == 1|r")
     table.insert(lines, "|cffaaaaaalocal in28 = CheckInteractDistance('target', 4)|r")
