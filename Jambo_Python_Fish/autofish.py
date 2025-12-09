@@ -261,20 +261,26 @@ class FishingBotThread(threading.Thread):
         img = self.capture_zone()
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         
-        # Detect three bobber components:
-        # 1. Red fin (top)
-        red_lower = np.array([0, 70, 50])
-        red_upper = np.array([10, 255, 255])
-        red_mask = cv2.inRange(hsv, red_lower, red_upper)
+        # Detect bobber components with relaxed ranges:
+        # 1. Red/Orange fin (top) - wider range
+        red_lower1 = np.array([0, 50, 50])
+        red_upper1 = np.array([15, 255, 255])
+        red_mask1 = cv2.inRange(hsv, red_lower1, red_upper1)
         
-        # 2. Blue body (middle)
-        blue_lower = np.array([100, 50, 50])
-        blue_upper = np.array([130, 255, 255])
+        # Also check orange-yellow range
+        red_lower2 = np.array([15, 50, 50])
+        red_upper2 = np.array([25, 255, 255])
+        red_mask2 = cv2.inRange(hsv, red_lower2, red_upper2)
+        red_mask = cv2.bitwise_or(red_mask1, red_mask2)
+        
+        # 2. Blue body (middle) - more permissive
+        blue_lower = np.array([95, 40, 40])
+        blue_upper = np.array([135, 255, 255])
         blue_mask = cv2.inRange(hsv, blue_lower, blue_upper)
         
-        # 3. Cork/beige (bottom) - yellow-brown range
-        cork_lower = np.array([15, 30, 80])
-        cork_upper = np.array([30, 150, 200])
+        # 3. Cork/beige/white (bottom) - wider range including bright colors
+        cork_lower = np.array([0, 0, 100])
+        cork_upper = np.array([180, 100, 255])
         cork_mask = cv2.inRange(hsv, cork_lower, cork_upper)
         
         # Combine all masks
@@ -289,7 +295,7 @@ class FishingBotThread(threading.Thread):
         
         for cnt in contours:
             area = cv2.contourArea(cnt)
-            if area < 30:  # Too small
+            if area < 15:  # Reduced minimum size
                 continue
             
             x, y, w, h = cv2.boundingRect(cnt)
@@ -303,14 +309,18 @@ class FishingBotThread(threading.Thread):
             blue_pixels = np.sum(roi_blue > 0)
             cork_pixels = np.sum(roi_cork > 0)
             
-            # Score based on having all three components
-            component_count = (red_pixels > 5) + (blue_pixels > 5) + (cork_pixels > 5)
+            # Count components (reduced threshold)
+            component_count = (red_pixels > 3) + (blue_pixels > 3) + (cork_pixels > 3)
             
             # Prefer tall, narrow shapes (bobber is vertical)
             aspect_ratio = h / float(max(w, 1))
             
-            # Combined score: prioritize having all 3 components + vertical shape
-            score = component_count * 100 + aspect_ratio * 10 + area * 0.1
+            # Combined score: prioritize having components + vertical shape
+            # Lower requirement - accept 1+ components instead of 2+
+            if component_count < 1:
+                continue
+            
+            score = component_count * 100 + aspect_ratio * 10 + area * 0.5
             
             if score > best_score:
                 best_score = score
@@ -323,10 +333,9 @@ class FishingBotThread(threading.Thread):
             cv2.drawContours(img, [cnt], -1, (0, 255, 0), 2)
             
             # Draw colored boxes for each component detected
-            if components >= 2:  # At least 2 components
-                cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 255), 1)
-                cv2.putText(img, f"Bobber ({components}/3)", (x, y-5), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0), 1)
+            cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 255), 1)
+            cv2.putText(img, f"Bobber ({components}/3)", (x, y-5), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0), 1)
             
             self.update_preview(img)
             
@@ -397,7 +406,7 @@ class FishingBotThread(threading.Thread):
     def _is_bobber_still_at(self, x, y, check_radius=30):
         """Check a small region around absolute screen coords (x,y) for bobber-like color/texture.
         Returns True ONLY if bobber is confidently detected in that region.
-        Uses multi-color detection (red fin, blue body, cork) for high confidence.
+        Uses multi-color detection (red fin, blue body, cork) with relaxed thresholds.
         """
         try:
             left = int(x - check_radius // 2)
@@ -409,28 +418,33 @@ class FishingBotThread(threading.Thread):
             bgr = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
             hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
             
-            # Check for red fin
-            red_lower = np.array([0, 60, 60])
-            red_upper = np.array([15, 255, 255])
-            red_mask = cv2.inRange(hsv, red_lower, red_upper)
+            # Check for red/orange fin - wider range
+            red_lower1 = np.array([0, 50, 50])
+            red_upper1 = np.array([15, 255, 255])
+            red_mask1 = cv2.inRange(hsv, red_lower1, red_upper1)
+            
+            red_lower2 = np.array([15, 50, 50])
+            red_upper2 = np.array([25, 255, 255])
+            red_mask2 = cv2.inRange(hsv, red_lower2, red_upper2)
+            red_mask = cv2.bitwise_or(red_mask1, red_mask2)
             red_pixels = np.sum(red_mask > 0)
             
             # Check for blue body
-            blue_lower = np.array([100, 50, 50])
-            blue_upper = np.array([130, 255, 255])
+            blue_lower = np.array([95, 40, 40])
+            blue_upper = np.array([135, 255, 255])
             blue_mask = cv2.inRange(hsv, blue_lower, blue_upper)
             blue_pixels = np.sum(blue_mask > 0)
             
-            # Check for cork/beige
-            cork_lower = np.array([15, 30, 80])
-            cork_upper = np.array([30, 150, 200])
+            # Check for cork/beige/white
+            cork_lower = np.array([0, 0, 100])
+            cork_upper = np.array([180, 100, 255])
             cork_mask = cv2.inRange(hsv, cork_lower, cork_upper)
             cork_pixels = np.sum(cork_mask > 0)
             
-            # Require at least 2 of 3 components with sufficient pixels
-            components_found = (red_pixels > 8) + (blue_pixels > 8) + (cork_pixels > 8)
+            # Require at least 1 component with sufficient pixels (relaxed from 2)
+            components_found = (red_pixels > 5) + (blue_pixels > 5) + (cork_pixels > 5)
             
-            if components_found >= 2:
+            if components_found >= 1:
                 return True
             
         except Exception as e:
