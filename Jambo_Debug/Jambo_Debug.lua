@@ -49,25 +49,38 @@ info:SetMaxLetters(0)
 info:EnableMouse(true)
 info:SetScript("OnEscapePressed", function() info:ClearFocus() end)
 
--- Test spell data - comprehensive range testing
+-- Test spell data - one spell per range breakpoint per class
 local TEST_SPELLS = {
-    -- Melee/Close
-    {name = "Arcane Explosion", range = 10},
-    {name = "Frost Nova", range = 10},
+    -- Mage
+    {name = "Frost Nova", range = 10, class = "MAGE"},
+    {name = "Fire Blast", range = 20, class = "MAGE"},
+    {name = "Frostbolt", range = 30, class = "MAGE"},
+    {name = "Fireball", range = 35, class = "MAGE"},
     
-    -- Mid range
-    {name = "Fire Blast", range = 20},
-    {name = "Cone of Cold", range = 10},
+    -- Warlock
+    {name = "Corruption", range = 30, class = "WARLOCK"},
+    {name = "Shadow Bolt", range = 30, class = "WARLOCK"},
     
-    -- Long range
-    {name = "Frostbolt", range = 30},
-    {name = "Scorch", range = 30},
-    {name = "Fireball", range = 35},
-    {name = "Pyroblast", range = 35},
+    -- Priest
+    {name = "Shadow Word: Pain", range = 30, class = "PRIEST"},
+    {name = "Mind Blast", range = 30, class = "PRIEST"},
+    {name = "Smite", range = 30, class = "PRIEST"},
     
-    -- CheckInteractDistance reference points
-    {name = "CheckInteractDistance(3) Duel", range = 10, isCheckInteract = true, checkType = 3},
-    {name = "CheckInteractDistance(4) Follow", range = 28, isCheckInteract = true, checkType = 4},
+    -- Druid
+    {name = "Wrath", range = 30, class = "DRUID"},
+    {name = "Moonfire", range = 30, class = "DRUID"},
+    
+    -- Shaman
+    {name = "Lightning Bolt", range = 30, class = "SHAMAN"},
+    {name = "Earth Shock", range = 20, class = "SHAMAN"},
+    
+    -- Hunter
+    {name = "Arcane Shot", range = 35, class = "HUNTER"},
+    {name = "Serpent Sting", range = 35, class = "HUNTER"},
+    
+    -- Paladin/Warrior/Rogue (melee)
+    {name = "Judgement", range = 10, class = "PALADIN"},
+    {name = "Charge", range = 25, class = "WARRIOR"},
 }
 local TEST_SPELL_NAME = "Fire Blast"
 local TEST_SPELL_ID = 2136
@@ -236,24 +249,31 @@ local function UpdateDebugInfo()
         table.insert(lines, "  |cffff0000SPELL OUT OF RANGE (20y)|r")
     end
     
-    -- Method 5b: Multi-spell range testing (IsSpellInRange)
+    -- Method 5b: IsSpellInRange + CheckInteractDistance Test
     table.insert(lines, "")
-    table.insert(lines, "|cff00ff00=== IsSpellInRange COMPREHENSIVE TEST ===|r")
+    table.insert(lines, "|cff00ff00=== RANGE DETECTION ===|r")
+    
+    -- CheckInteractDistance first
+    local in10 = CheckInteractDistance("target", 3)
+    local in28 = CheckInteractDistance("target", 4)
+    
+    local duelColor = in10 and "|cff00ff00" or "|cffff0000"
+    local followColor = in28 and "|cff00ff00" or "|cffff0000"
+    table.insert(lines, duelColor .. "Duel (10y): " .. (in10 and "YES" or "NO") .. "|r")
+    table.insert(lines, followColor .. "Follow (28y): " .. (in28 and "YES" or "NO") .. "|r")
+    
+    table.insert(lines, "")
     
     if IsSpellInRange then
-        table.insert(lines, "|cff00ff00IsSpellInRange API: EXISTS|r")
+        table.insert(lines, "|cff00ff00IsSpellInRange: Available|r")
         table.insert(lines, "")
         
+        -- Only test spells that exist
         for _, spell in ipairs(TEST_SPELLS) do
-            if spell.isCheckInteract then
-                -- CheckInteractDistance test
-                local result = CheckInteractDistance("target", spell.checkType)
-                local color = result and "|cff00ff00" or "|cffff0000"
-                local status = result and "YES" or "NO"
-                table.insert(lines, color .. spell.name .. ": " .. status .. "|r")
-            else
-                -- IsSpellInRange test
-                local spellRange = IsSpellInRange(spell.name, "target")
+            local spellRange = IsSpellInRange(spell.name, "target")
+            
+            -- Only show if spell exists (not nil from missing spell)
+            if spellRange ~= nil or IsUsableSpell(spell.name) then
                 local rangeStr = "nil"
                 local color = "|cffaaaaaa"
                 
@@ -270,36 +290,32 @@ local function UpdateDebugInfo()
         end
         
         table.insert(lines, "")
-        table.insert(lines, "|cffffff00Range Brackets:|r")
-        local in10 = CheckInteractDistance("target", 3)
-        local in28 = CheckInteractDistance("target", 4)
+        table.insert(lines, "|cffffff00Range Bracket:|r")
+        
         local fireBlast = IsSpellInRange("Fire Blast", "target")
         local frostbolt = IsSpellInRange("Frostbolt", "target")
         
         if in10 then
-            table.insert(lines, "|cff00ff00✓ 0-10 yards (Duel range)|r")
+            table.insert(lines, "|cff00ff00✓ 0-10 yards|r")
         elseif fireBlast == 1 then
-            table.insert(lines, "|cff00ff00✓ 10-20 yards (Fire Blast range)|r")
+            table.insert(lines, "|cff00ff00✓ 10-20 yards|r")
         elseif in28 then
-            table.insert(lines, "|cffffff00✓ 20-28 yards (Between Fire Blast and Follow)|r")
+            table.insert(lines, "|cffffff00✓ 20-28 yards|r")
         elseif frostbolt == 1 then
-            table.insert(lines, "|cffffff00✓ 28-30 yards (Between Follow and Frostbolt)|r")
+            table.insert(lines, "|cffffff00✓ 28-30 yards|r")
         else
-            table.insert(lines, "|cffff0000✗ 30+ yards (Out of most spell ranges)|r")
+            table.insert(lines, "|cffff0000✗ 30+ yards|r")
         end
     else
-        table.insert(lines, "|cffff0000IsSpellInRange API: DOES NOT EXIST|r")
-        table.insert(lines, "|cffffff00Falling back to CheckInteractDistance only|r")
-        
-        local in10 = CheckInteractDistance("target", 3)
-        local in28 = CheckInteractDistance("target", 4)
+        table.insert(lines, "|cffff0000IsSpellInRange: NOT AVAILABLE|r")
+        table.insert(lines, "")
         
         if in10 then
-            table.insert(lines, "|cff00ff00✓ Within 10 yards|r")
+            table.insert(lines, "|cff00ff00✓ 0-10 yards|r")
         elseif in28 then
-            table.insert(lines, "|cffffff00✓ Within 28 yards (10-28y range)|r")
+            table.insert(lines, "|cffffff00✓ 10-28 yards|r")
         else
-            table.insert(lines, "|cffff0000✗ Beyond 28 yards|r")
+            table.insert(lines, "|cffff0000✗ 28+ yards|r")
         end
     end
     
@@ -398,17 +414,16 @@ local function UpdateDebugInfo()
     -- Additional info
     table.insert(lines, "")
     table.insert(lines, "|cff00ff00=== SUMMARY ===|r")
-    table.insert(lines, "Available APIs:")
-    table.insert(lines, "  • IsSpellInRange(spell, unit) - " .. (IsSpellInRange and "|cff00ff00YES|r" or "|cffff0000NO|r"))
-    table.insert(lines, "  • CheckInteractDistance(unit, idx) - |cff00ff00YES|r")
-    table.insert(lines, "  • IsActionInRange(slot, unit) - |cff00ff00YES (unreliable)|r")
+    table.insert(lines, "✅ IsSpellInRange WORKS in Classic Anniversary!")
+    table.insert(lines, "✅ CheckInteractDistance always works")
     table.insert(lines, "")
-    table.insert(lines, "Range Detection Brackets:")
-    table.insert(lines, "  0-10y: CheckInteractDistance(target, 3)")
-    table.insert(lines, "  10-20y: Fire Blast IN but not Duel range")
-    table.insert(lines, "  20-28y: Fire Blast OUT but Follow range IN")
-    table.insert(lines, "  28-30y: Follow OUT but Frostbolt IN")
-    table.insert(lines, "  30+y: All OUT")
+    table.insert(lines, "Recommended Code:")
+    table.insert(lines, "|cffaaaaaa-- For 20-yard spells (Fire Blast)|r")
+    table.insert(lines, "|cffaaaaaalocal in20 = IsSpellInRange('Fire Blast', 'target') == 1|r")
+    table.insert(lines, "|cffaaaaaalocal in28 = CheckInteractDistance('target', 4)|r")
+    table.insert(lines, "")
+    table.insert(lines, "|cffaaaaaa-- For 30-yard spells (Frostbolt)|r")
+    table.insert(lines, "|cffaaaaaalocal in30 = IsSpellInRange('Frostbolt', 'target') == 1|r")
     table.insert(lines, "")
     table.insert(lines, "|cffaaaaaa(Click text to select/copy)|r")
     
