@@ -72,6 +72,14 @@ local function UpdateDebugInfo()
     table.insert(lines, "Exists: " .. tostring(UnitExists("target")))
     table.insert(lines, "IsEnemy: " .. tostring(UnitCanAttack("player", "target")))
     table.insert(lines, "IsDead: " .. tostring(UnitIsDead("target")))
+    
+    if UnitIsDead("target") then
+        table.insert(lines, "")
+        table.insert(lines, "|cffff0000WARNING: Target is DEAD!|r")
+        table.insert(lines, "|cffff0000IsActionInRange only works on LIVE targets!|r")
+        table.insert(lines, "|cffff0000Target a LIVING enemy to test range.|r")
+    end
+    
     table.insert(lines, "")
     
     -- Spell book info
@@ -200,10 +208,27 @@ local function UpdateDebugInfo()
     table.insert(lines, "Distance Estimates:")
     if CheckInteractDistance("target", 3) then
         table.insert(lines, "  |cff00ff00<= 10 yards|r (Duel range)")
+        table.insert(lines, "  |cff00ff00SPELL IS IN RANGE (20y)|r")
     elseif CheckInteractDistance("target", 4) then
         table.insert(lines, "  |cffffff00<= 28 yards|r (Follow range)")
+        table.insert(lines, "  |cffffff00SPELL IS IN RANGE (20y)|r")
     else
         table.insert(lines, "  |cffff0000> 28 yards|r (Out of follow range)")
+        table.insert(lines, "  |cffff0000SPELL OUT OF RANGE (20y)|r")
+    end
+    
+    -- Method 5b: Estimated 20-yard range
+    table.insert(lines, "")
+    table.insert(lines, "|cff00ff00=== 20 YARD ESTIMATE ===|r")
+    if CheckInteractDistance("target", 4) then
+        table.insert(lines, "|cff00ff00Target is within 28 yards|r")
+        table.insert(lines, "|cff00ff00Fire Blast (20y) should be IN RANGE|r")
+        if not CheckInteractDistance("target", 3) then
+            table.insert(lines, "|cffffff00(Between 10-28 yards)|r")
+        end
+    else
+        table.insert(lines, "|cffff0000Target is beyond 28 yards|r")
+        table.insert(lines, "|cffff0000Fire Blast (20y) is OUT OF RANGE|r")
     end
     
     -- Method 6: UnitInRange (party/raid only in Classic)
@@ -241,11 +266,15 @@ local function UpdateDebugInfo()
     table.insert(lines, "|cff00ff00=== ADDITIONAL INFO ===|r")
     table.insert(lines, "To test range:")
     table.insert(lines, "1. Put Fire Blast on action bar")
-    table.insert(lines, "2. Target an enemy")
+    table.insert(lines, "2. Target a LIVING enemy (not dead)")
     table.insert(lines, "3. Walk toward/away from target")
     table.insert(lines, "4. Watch IsActionInRange values")
     table.insert(lines, "")
     table.insert(lines, "Expected Fire Blast range: 20 yards")
+    table.insert(lines, "")
+    table.insert(lines, "|cffaaaaaa** IsActionInRange only works on ALIVE targets **|r")
+    table.insert(lines, "|cffaaaaaa** Use CheckInteractDistance(target,4) for dead targets **|r")
+    table.insert(lines, "|cffaaaaaa** Follow range (28y) > Fire Blast range (20y) **|r")
     table.insert(lines, "")
     table.insert(lines, "|cffaaaaaa(Click text to select/copy)|r")
     
