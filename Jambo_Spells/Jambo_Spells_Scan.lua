@@ -56,6 +56,14 @@ local function FindSlotForMacro(macroIndex)
     return 0
 end
 
+local function FindSlotForItem(itemID)
+    for slot = 1, 120 do
+        local type, id = GetActionInfo(slot)
+        if type == "item" and id == itemID then return slot end
+    end
+    return 0
+end
+
 function J:FullScan()
     local masterList = {}
     local seenIDs = {}
@@ -152,9 +160,10 @@ function J:FullScan()
                     local spellName, spellID = GetItemSpell(id)
                     if spellID then
                         local desc, heal, dmg = GetTooltipStats(link, true)
+                        local slot = FindSlotForItem(id)  -- Find action bar slot
                         table.insert(masterList, {
                             TYPE = "ITEM", NAME = name, ID = id, RANK = 1, LEVEL = 0,
-                            ICON = icon, DESC = desc, COST = 0, CAST = 0, RANGE = 0, SLOT = 0, KNOWN = true,
+                            ICON = icon, DESC = desc, COST = 0, CAST = 0, RANGE = 0, SLOT = slot, KNOWN = true,
                             HEAL_TOTAL = heal, DMG_TOTAL = dmg, HPS = heal, HPM = 0, DPS = dmg, DPM = 0
                         })
                     end
@@ -173,9 +182,10 @@ function J:FullScan()
             local spellName, spellID = GetItemSpell(id)
             if spellID then
                 local desc, heal, dmg = GetTooltipStats(link, true)
+                local slot = FindSlotForItem(id)  -- Find action bar slot
                 table.insert(masterList, {
                     TYPE = "ITEM", NAME = name, ID = id, RANK = 1, LEVEL = 0,
-                    ICON = icon, DESC = desc, COST = 0, CAST = 0, RANGE = 0, SLOT = 0, KNOWN = true,
+                    ICON = icon, DESC = desc, COST = 0, CAST = 0, RANGE = 0, SLOT = slot, KNOWN = true,
                     HEAL_TOTAL = heal, DMG_TOTAL = dmg, HPS = heal, HPM = 0, DPS = dmg, DPM = 0,
                     EQUIPPED = true  -- Mark as equipped
                 })
