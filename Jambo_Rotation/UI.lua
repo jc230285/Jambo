@@ -373,12 +373,12 @@ function UI:CreateRightPanel()
 
         r.txt = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         r.txt:SetPoint("LEFT", 14, 0)
-        r.txt:SetPoint("RIGHT", -100, 0)
+        r.txt:SetWidth(240)
         r.txt:SetJustifyH("LEFT")
 
         r.val = r:CreateFontString(nil, "OVERLAY", "GameFontNormalTiny")
-        r.val:SetPoint("RIGHT", -30, 0)
-        r.val:SetWidth(90)
+        r.val:SetPoint("LEFT", 260, 0)
+        r.val:SetWidth(140)
         r.val:SetJustifyH("LEFT")
         r.val:SetTextColor(0, 0.9, 0.9)
 
@@ -517,7 +517,14 @@ function UI:RefreshConds()
             elseif c.type == "AURA" then
                 txt = string.format("Aura %s on %s", c.auraName or "?", c.unit or "target")
             elseif c.type == "SPELL" then
-                txt = string.format("Spell %s", c.spellCondName or "?")
+                local spellName = c.spellCondName or "AUTO"
+                local checks = {}
+                if c.chkMana then table.insert(checks, "Mana") end
+                if c.chkRange then table.insert(checks, "Rng:" .. (c.rangeUnit or "tgt")) end
+                if c.chkRemain then table.insert(checks, "CD" .. (c.remOp or "") .. (c.remVal or "")) end
+                if c.chkCharges then table.insert(checks, "Chg" .. (c.chargesOp or "") .. (c.chargesVal or "")) end
+                local checkStr = #checks > 0 and (" [" .. table.concat(checks, ",") .. "]") or ""
+                txt = string.format("SPELL:%s%s", spellName, checkStr)
             elseif c.type == "PLAYER" or c.type == "UNIT" then
                 txt = "PLAYER:"
                 local checks = {}
@@ -534,6 +541,18 @@ function UI:RefreshConds()
                 else
                     txt = txt .. " No conditions"
                 end
+            elseif c.type == "UNIT_TARGET" or c.type == "TARGET" then
+                local unit = c.unit or "target"
+                local checks = {}
+                if c.friendly then table.insert(checks, "Friendly") end
+                if c.hostile then table.insert(checks, "Hostile") end
+                if c.notDead then table.insert(checks, "Alive") end
+                if c.isDead then table.insert(checks, "Dead") end
+                if c.attackable then table.insert(checks, "Attackable") end
+                if c.casting then table.insert(checks, "Casting") end
+                if c.checkRange then table.insert(checks, "Rng" .. (c.rangeVal or "")) end
+                local checkStr = #checks > 0 and (" [" .. table.concat(checks, ",") .. "]") or ""
+                txt = string.format("UNIT:%s%s", unit, checkStr)
             end
 
             r.txt:SetText(txt)
