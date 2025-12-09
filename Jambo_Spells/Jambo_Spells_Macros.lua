@@ -191,10 +191,10 @@ function J:CreateUtilityMacros()
     -- Dynamic AutoAttack based on wand presence
     local autoAttackBody, autoAttackIcon
     if hasWand then
-        autoAttackBody = "#showtooltip 18\n/cleartarget [dead]\n/targetenemy [noexists]\n/castsequence [harm,nodead] reset=2 !Shoot, null"
+        autoAttackBody = "#showtooltip 18\n/cleartarget [dead]\n/targetenemy [noexists]\n/petattack [harm,nodead]\n/castsequence [harm,nodead] reset=2 !Shoot, null"
         autoAttackIcon = "INV_MISC_QUESTIONMARK"  -- Wand icon
     else
-        autoAttackBody = "#showtooltip 16\n/cleartarget [dead]\n/startattack [harm,nodead]\n/targetenemy [noexists]"
+        autoAttackBody = "#showtooltip 16\n/cleartarget [dead]\n/targetenemy [noexists]\n/petattack [harm,nodead]\n/startattack [harm,nodead]"
         autoAttackIcon = "INV_MISC_QUESTIONMARK"  -- Melee attack icon
     end
     
