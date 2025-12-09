@@ -742,12 +742,19 @@ function UI:CreateEditor(parent)
     ce.grpSpell.manaChk = newCheck(ce.grpSpell, "Check Mana")
     ce.grpSpell.manaChk:SetPoint("TOPLEFT", ce.grpSpell.chgChk, "BOTTOMLEFT", 0, -12)
 
-    -- Range check with unit selector
+    -- Range check with unit selector and range method
     ce.grpSpell.rangeChk = newCheck(ce.grpSpell, "Check Range")
     ce.grpSpell.rangeChk:SetPoint("TOPLEFT", ce.grpSpell.manaChk, "BOTTOMLEFT", 0, -8)
-    ce.grpSpell.rangeUnit = newDropdown(ce.grpSpell, 140, "Range Unit")
+    
+    -- Range method dropdown (what range to check)
+    ce.grpSpell.rangeMethod = newDropdown(ce.grpSpell, 100, "Range")
+    ce.grpSpell.rangeMethod:ClearAllPoints()
+    ce.grpSpell.rangeMethod:SetPoint("LEFT", ce.grpSpell.rangeChk, "RIGHT", 18, 0)
+    
+    -- Range unit dropdown
+    ce.grpSpell.rangeUnit = newDropdown(ce.grpSpell, 100, "Unit")
     ce.grpSpell.rangeUnit:ClearAllPoints()
-    ce.grpSpell.rangeUnit:SetPoint("LEFT", ce.grpSpell.rangeChk, "RIGHT", 18, 0)
+    ce.grpSpell.rangeUnit:SetPoint("LEFT", ce.grpSpell.rangeMethod, "RIGHT", 10, 0)
 
     -- Info/debug line - now shows more detailed info including actual spell range
     ce.grpSpell.info = ce.grpSpell:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -919,6 +926,7 @@ function UI:EditCondition(idx)
         c.chargesOp = c.chargesOp or "<="
         c.chargesVal = c.chargesVal or 0
         c.rangeUnit = c.rangeUnit or "target"
+        c.rangeMethod = c.rangeMethod or "10y"
         c.chkRemain = c.chkRemain or false
         c.chkCharges = c.chkCharges or false
         c.chkMana = c.chkMana or false
@@ -971,6 +979,17 @@ function UI:EditCondition(idx)
 
         ce.grpSpell.rangeChk:SetChecked(c.chkRange)
         ce.grpSpell.rangeChk:SetScript("OnClick", function() c.chkRange = ce.grpSpell.rangeChk:GetChecked() end)
+        
+        -- Range method dropdown
+        setDropdownOptions(ce.grpSpell.rangeMethod, c.rangeMethod or "10y", {
+            { text = "10y (Duel)", value = "10y", onSelect = function(val) c.rangeMethod = val end },
+            { text = "20y (Fire Blast)", value = "20y", onSelect = function(val) c.rangeMethod = val end },
+            { text = "28y (Follow)", value = "28y", onSelect = function(val) c.rangeMethod = val end },
+            { text = "30y (Frostbolt)", value = "30y", onSelect = function(val) c.rangeMethod = val end },
+            { text = "35y (Fireball)", value = "35y", onSelect = function(val) c.rangeMethod = val end },
+        })
+        
+        -- Range unit dropdown
         setDropdownOptions(ce.grpSpell.rangeUnit, c.rangeUnit or "target", {
             { text = "target", value = "target", onSelect = function(val) c.rangeUnit = val end },
             { text = "focus", value = "focus", onSelect = function(val) c.rangeUnit = val end },

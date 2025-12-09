@@ -192,31 +192,29 @@ function J:CreateUtilityMacros()
     local autoAttackBody, autoAttackIcon
     if hasWand then
         autoAttackBody = "#showtooltip 18\n/cleartarget [dead]\n/targetenemy [noexists]\n/castsequence [harm,nodead] reset=2 !Shoot, null"
-        autoAttackIcon = "135463"  -- Wand icon
+        autoAttackIcon = "INV_MISC_QUESTIONMARK"  -- Wand icon
     else
         autoAttackBody = "#showtooltip 16\n/cleartarget [dead]\n/startattack [harm,nodead]\n/targetenemy [noexists]"
-        autoAttackIcon = "132349"  -- Melee attack icon
+        autoAttackIcon = "INV_MISC_QUESTIONMARK"  -- Melee attack icon
     end
     
     local macros = {
-        {"DrinkWater", "132794", "#showtooltip item:159\n/use item:159"}, 
-        {"Feast", "132794", "#showtooltip item:117\n/use item:117\n/use item:159"},
-        {"EatFood", "133972", "#showtooltip item:117\n/use item:117"}, 
-        {"AutoHeal", "134832", "#showtooltip item:118\n/use item:118"}, 
-        {"AutoMana", "134850", "#showtooltip item:2455\n/use item:2455"}, 
-        {"AutoBandage", "134330", "#showtooltip item:1251\n/use [target=player] item:1251"},
-        {"AutoScrolls", "134937", "#showtooltip item:955\n/use Scroll of Strength\n/use Scroll of Agility"},
-        
+        {"DrinkWater", "INV_MISC_QUESTIONMARK", "#showtooltip item:159\n/use item:159"}, 
+        {"Feast", "INV_MISC_QUESTIONMARK", "#showtooltip item:117\n/use item:117\n/use item:159"},
+        {"EatFood", "INV_MISC_QUESTIONMARK", "#showtooltip item:117\n/use item:117"}, 
+        {"AutoHeal", "INV_MISC_QUESTIONMARK", "#showtooltip item:118\n/use item:118"}, 
+        {"AutoMana", "INV_MISC_QUESTIONMARK", "#showtooltip item:2455\n/use item:2455"}, 
+        {"AutoBandage", "INV_MISC_QUESTIONMARK", "#showtooltip item:1251\n/use [target=player] item:1251"},
+        {"AutoScrolls", "INV_MISC_QUESTIONMARK", "#showtooltip item:955\n/use Scroll of Strength\n/use Scroll of Agility"},
         {"Break 10", "254288", "/dbm timer 600 10 Minute Break!\n/y 10 Minute Break!"},
         {"Break 5", "132161", "/dbm timer 300 5 Minute Break!\n/y 5 Minute Break!"},
         {"CycleEnemy", "132108", "#showtooltip\n/cleartarget [dead][noexists]\n/targetenemy [noexists][dead]"},
         {"CycleFriend", "132108", "#showtooltip\n/cleartarget [dead][noexists]\n/targetfriend [noharm]"},
         {"Reload", "132096", "/reload"},
         {"Roll", "252184", "/roll"},
-        {"AutoShoot", "132329", "#showtooltip Shoot\n/castsequence [harm] reset=2 !Shoot, null\n/castsequence [help,target=targettarget] reset=2 !Shoot, null"},
         {"AutoAttack", autoAttackIcon, autoAttackBody},
-        {"T1", "134400", "#showtooltip 13\n/use 13"},
-        {"T2", "134400", "#showtooltip 14\n/use 14"},
+        {"T1", "INV_MISC_QUESTIONMARK", "#showtooltip 13\n/use 13"},
+        {"T2", "INV_MISC_QUESTIONMARK", "#showtooltip 14\n/use 14"},
     }
     
     for _, m in ipairs(macros) do
