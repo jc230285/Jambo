@@ -596,13 +596,78 @@ end
 function E:CheckItem(c)
     if not c.itemName then return false, "NoItemName" end
     
-    -- Get item data from Book
-    local itemData = NS.Book[c.itemName]
-    if not itemData or itemData.type ~= "ITEM" then 
-        return false, "Count:0 CD:0.0s" 
-    end
+    local itemData = nil
+    local itemID = nil
     
-    local itemID = itemData.id
+    -- Handle AUTO: items by finding the best match
+    if c.itemName:find("^AUTO:") then
+        local autoType = c.itemName:match("^AUTO:(.+)$")
+        
+        if autoType == "WORST_FOOD" or autoType == "DRINK" then
+            -- Find lowest level food/drink in bags
+            local lowestLevel = 999999
+            local lowestItem = nil
+            
+            for _, d in pairs(NS.Book or {}) do
+                if d and d.type == "ITEM" then
+                    local itemCount = GetItemCount(d.id, false)
+                    if itemCount > 0 then
+                        -- Check if it's food or drink based on tooltip
+                        local _, link = GetItemInfo(d.id)
+                        if link then
+                            -- Food restores health, drink restores mana
+                            if autoType == "WORST_FOOD" and d.name and (d.name:find("Bread") or d.name:find("Food") or d.name:find("Cheese") or d.name:find("Meat")) then
+                                if d.rank and d.rank < lowestLevel then
+                                    lowestLevel = d.rank
+                                    lowestItem = d
+                                end
+                            elseif autoType == "DRINK" and d.name and (d.name:find("Water") or d.name:find("Drink") or d.name:find("Milk") or d.name:find("Juice")) then
+                                if d.rank and d.rank < lowestLevel then
+                                    lowestLevel = d.rank
+                                    lowestItem = d
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            
+            if lowestItem then
+                itemData = lowestItem
+                itemID = lowestItem.id
+            end
+            
+        elseif autoType == "HEALTH_POTION" or autoType == "MANA_POTION" then
+            -- Find any health/mana potion in bags
+            for _, d in pairs(NS.Book or {}) do
+                if d and d.type == "ITEM" then
+                    local itemCount = GetItemCount(d.id, false)
+                    if itemCount > 0 then
+                        if autoType == "HEALTH_POTION" and d.name and d.name:find("Healing Potion") then
+                            itemData = d
+                            itemID = d.id
+                            break
+                        elseif autoType == "MANA_POTION" and d.name and d.name:find("Mana Potion") then
+                            itemData = d
+                            itemID = d.id
+                            break
+                        end
+                    end
+                end
+            end
+        end
+        
+        if not itemData then
+            return false, "Count:0 CD:0.0s"
+        end
+    else
+        -- Regular item lookup
+        itemData = NS.Book[c.itemName]
+        if not itemData or itemData.type ~= "ITEM" then 
+            return false, "Count:0 CD:0.0s" 
+        end
+        itemID = itemData.id
+    end
     
     -- Check item count (with optional charges)
     if c.checkCount then

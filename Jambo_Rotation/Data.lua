@@ -24,6 +24,12 @@ local function scanActionBars()
                 map[macroName] = map[macroName] or {}
                 table.insert(map[macroName], { slot = slot, id = id, rank = 0, isMacro = true })
             end
+        elseif t == "item" then
+            local itemName = GetItemInfo(id)
+            if itemName then
+                map[itemName] = map[itemName] or {}
+                table.insert(map[itemName], { slot = slot, id = id, rank = 0, isItem = true })
+            end
         end
     end
     return map
@@ -32,7 +38,15 @@ end
 local function pickBestBar(entries)
     if not entries or #entries == 0 then return nil end
     local best = entries[1]
-    for _, e in ipairs(entries) do if e.rank > best.rank then best = e end end
+    for _, e in ipairs(entries) do 
+        -- For items and macros, just pick first slot found
+        -- For spells, pick highest rank
+        if e.isItem or e.isMacro then
+            return e
+        elseif e.rank > best.rank then 
+            best = e 
+        end
+    end
     return best
 end
 
@@ -53,8 +67,8 @@ function Data:BuildBook()
             if known or usableType then
                 local bestBar = pickBestBar(bars[name])
                 local realSlot = bestBar and bestBar.slot or 0
-                local realID = (bestBar and not bestBar.isMacro) and bestBar.id or info.ID
-                local realRank = (bestBar and not bestBar.isMacro) and bestBar.rank or (info.RANK or 1)
+                local realID = (bestBar and not bestBar.isMacro and not bestBar.isItem) and bestBar.id or info.ID
+                local realRank = (bestBar and not bestBar.isMacro and not bestBar.isItem) and bestBar.rank or (info.RANK or 1)
 
                 NS.Book[name] = {
                     type = info.TYPE,
