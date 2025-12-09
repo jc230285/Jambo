@@ -1119,11 +1119,7 @@ function UI:EditCondition(idx)
             ce.grpSpell.rangeUnit:SetShown(c.chkRange)
         end)
         
-        -- Default range value to spell's actual range if not set
-        if not c.rangeVal and s and s.name then
-            local spellRange = _G.JamboSpells and _G.JamboSpells:GetSpellRange(s.name)
-            c.rangeVal = spellRange or 30
-        end
+        -- Default range values
         c.rangeOp = c.rangeOp or "<="
         c.rangeVal = c.rangeVal or 30
         
