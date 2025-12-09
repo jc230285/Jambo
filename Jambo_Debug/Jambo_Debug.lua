@@ -357,19 +357,31 @@ local function UpdateDebugInfo()
             table.insert(lines, "|cffaaaaaa" .. "No range estimate available|r")
         end
         
-        -- Get all available checkers for current class
+        -- Show library internals for debugging
         table.insert(lines, "")
-        table.insert(lines, "|cffffff00Available Range Checkers:|r")
-        
-        -- Try common ranges
-        local testRanges = {5, 8, 10, 15, 20, 25, 28, 30, 35, 40}
-        for _, range in ipairs(testRanges) do
-            local checker = LRC:GetChecker(range)
-            if checker then
-                local inRange = checker("target")
-                local status = inRange and "|cff00ff00IN|r" or "|cffff0000OUT|r"
-                table.insert(lines, range .. "y: " .. status)
+        table.insert(lines, "|cffffff00Library Methods:|r")
+        local methods = {}
+        for k, v in pairs(LRC) do
+            if type(v) == "function" then
+                table.insert(methods, k)
             end
+        end
+        table.sort(methods)
+        for _, method in ipairs(methods) do
+            table.insert(lines, "  " .. method)
+        end
+        
+        -- Show available range checkers tables
+        table.insert(lines, "")
+        table.insert(lines, "|cffffff00Available Checker Tables:|r")
+        if LRC.harmRC then
+            table.insert(lines, "harmRC (hostile): " .. tostring(#LRC.harmRC) .. " checkers")
+            for i, checker in ipairs(LRC.harmRC) do
+                table.insert(lines, "  " .. i .. ": range=" .. tostring(checker.range))
+            end
+        end
+        if LRC.friendRC then
+            table.insert(lines, "friendRC (friendly): " .. tostring(#LRC.friendRC) .. " checkers")
         end
     else
         table.insert(lines, "|cffff0000LibRangeCheck-3.0: NOT AVAILABLE|r")
