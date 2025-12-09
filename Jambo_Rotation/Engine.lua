@@ -27,9 +27,9 @@ function E:CheckSpell(step)
         if remaining > 0.1 then return false, string.format("CD %.1fs", remaining) end
     end
 
-    if data.slot and data.slot > 0 and UnitExists("target") then
-        local inRange = IsActionInRange(data.slot, "target")
-        if inRange == 0 then return false, "Range" end
+    if UnitExists("target") and NS.Range then
+        local rangeStatus = NS.Range:GetRangeNumeric(step.name, "target")
+        if rangeStatus == 0 then return false, "Range" end
     end
     return true, "Ready"
 end
@@ -202,24 +202,14 @@ function E:CheckSpellCond(c, step)
             return false, "NoUnit" 
         end
         
-        local inRange = nil
-        if data.slot and data.slot > 0 then
-            inRange = IsActionInRange(data.slot, unit)
+        local rangeStatus = "NoLim"
+        if NS.Range then
+            rangeStatus = NS.Range:GetRangeStatus(data.name or step.name, unit)
         end
         
-        -- inRange: 1=in range, 0=out of range, nil=no range limit
-        local rangeStatus = "?"
-        if inRange == 1 then rangeStatus = "IN"
-        elseif inRange == 0 then rangeStatus = "OUT"
-        else rangeStatus = "NoLim" end
-        
-        -- If spell has a range and we're out of range, fail
-        if inRange == 0 then 
+        -- If spell is out of range, fail
+        if rangeStatus == "OutOfRange" then 
             return false, "OutOfRange(max:" .. (data.range or "?") .. ")" 
-        end
-        -- Only fail on nil if spell actually has a range defined
-        if inRange == nil and data.range and data.range > 0 then
-            return false, "Range?(" .. rangeStatus .. ",max:" .. data.range .. ")" 
         end
     end
 
@@ -230,17 +220,9 @@ function E:CheckSpellCond(c, step)
     -- Add range check status if enabled
     if c.chkRange then
         local unit = c.rangeUnit or "target"
-        if UnitExists(unit) then
-            local inRange = nil
-            if data.slot and data.slot > 0 then
-                inRange = IsActionInRange(data.slot, unit)
-            end
-            local rangeStr = "?"
-            if inRange == 1 then rangeStr = "IN"
-            elseif inRange == 0 then rangeStr = "OUT"
-            elseif inRange == nil then rangeStr = "NoLim"
-            else rangeStr = "?" end
-            table.insert(parts, "RngChk:" .. rangeStr)
+        if UnitExists(unit) and NS.Range then
+            local rangeStatus = NS.Range:GetRangeStatus(data.name or step.name, unit)
+            table.insert(parts, "RngChk:" .. rangeStatus)
         end
     end
     
