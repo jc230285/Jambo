@@ -336,7 +336,47 @@ local function UpdateDebugInfo()
         end
     end
     
-    -- Method 5c: IsSpellInRange API Test (Anniversary Edition)
+    -- Method 5c: LibRangeCheck-3.0 (if available)
+    table.insert(lines, "")
+    table.insert(lines, "|cff00ff00=== LIBRANGECHECK-3.0 ===|r")
+    local LRC = LibStub and LibStub("LibRangeCheck-3.0", true)
+    if LRC then
+        table.insert(lines, "|cff00ff00LibRangeCheck-3.0: Available|r")
+        
+        -- Get range estimate
+        local minRange, maxRange = LRC:GetRange("target")
+        if minRange and maxRange then
+            table.insert(lines, "Range Bracket: " .. minRange .. "-" .. maxRange .. " yards")
+            
+            -- Show color-coded result
+            local color = "|cff00ff00"
+            if maxRange > 30 then color = "|cffff0000"
+            elseif maxRange > 20 then color = "|cffffff00" end
+            table.insert(lines, color .. "Estimated Distance: " .. minRange .. "-" .. maxRange .. "y|r")
+        else
+            table.insert(lines, "|cffaaaaaa" .. "No range estimate available|r")
+        end
+        
+        -- Get all available checkers for current class
+        table.insert(lines, "")
+        table.insert(lines, "|cffffff00Available Range Checkers:|r")
+        
+        -- Try common ranges
+        local testRanges = {5, 8, 10, 15, 20, 25, 28, 30, 35, 40}
+        for _, range in ipairs(testRanges) do
+            local checker = LRC:GetChecker(range)
+            if checker then
+                local inRange = checker("target")
+                local status = inRange and "|cff00ff00IN|r" or "|cffff0000OUT|r"
+                table.insert(lines, range .. "y: " .. status)
+            end
+        end
+    else
+        table.insert(lines, "|cffff0000LibRangeCheck-3.0: NOT AVAILABLE|r")
+        table.insert(lines, "Install LibRangeCheck-3.0 for advanced range checking")
+    end
+    
+    -- Method 5d: IsSpellInRange API Test (Anniversary Edition)
     table.insert(lines, "")
     table.insert(lines, "|cff00ff00=== RECOMMENDED LOGIC ===|r")
     if IsSpellInRange then
@@ -360,7 +400,7 @@ local function UpdateDebugInfo()
         table.insert(lines, "Can only use CheckInteractDistance (10y/28y)")
     end
     
-    -- Method 5d: Estimated 20-yard range
+    -- Method 5e: Estimated 20-yard range
     table.insert(lines, "")
     table.insert(lines, "|cff00ff00=== 20 YARD ESTIMATE ===|r")
     if CheckInteractDistance("target", 4) then
@@ -376,7 +416,7 @@ local function UpdateDebugInfo()
         table.insert(lines, "|cffff0000Fire Blast (20y) is OUT OF RANGE|r")
     end
     
-    -- Method 5c: Jambo Range Module (if available)
+    -- Method 5f: Jambo Range Module (if available)
     if _G.JamboRotation and _G.JamboRotation.Range then
         table.insert(lines, "")
         table.insert(lines, "|cff00ff00=== JAMBO RANGE MODULE ===|r")
