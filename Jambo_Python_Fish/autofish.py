@@ -261,30 +261,22 @@ class FishingBotThread(threading.Thread):
         img = self.capture_zone()
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         
-        # Detect only vibrant bobber colors (not dull water)
-        # Based on WoW bobbers: bright red fin, bright blue/teal body, white/tan float
+        # Focus ONLY on vibrant red and blue - ignore white/cork for now
+        # This should eliminate false positives from water reflections/sky
         
-        # 1. Red fin - vibrant red/orange (hue 0-10 is red)
-        # Must have high saturation (>120) and brightness (>100)
-        red_lower = np.array([0, 120, 100])
+        # 1. Red fin - VERY vibrant red only
+        red_lower = np.array([0, 150, 120])  # Much higher saturation requirement
         red_upper = np.array([10, 255, 255])
         red_mask = cv2.inRange(hsv, red_lower, red_upper)
         
-        # 2. Blue/Teal body - vibrant cyan/blue (NOT water blue!)
-        # Water is hue ~100-110 with saturation 40-70
-        # Bobber is hue ~100-110 with saturation >100
-        blue_lower = np.array([90, 100, 100])
-        blue_upper = np.array([110, 255, 255])
+        # 2. Blue/Teal body - vibrant cyan/blue ONLY
+        # Narrower hue range, very high saturation to avoid water
+        blue_lower = np.array([95, 120, 100])  # Even higher saturation
+        blue_upper = np.array([105, 255, 255])  # Narrower hue range
         blue_mask = cv2.inRange(hsv, blue_lower, blue_upper)
         
-        # 3. White/Tan float - bright colors with low saturation
-        cork_lower = np.array([0, 0, 180])
-        cork_upper = np.array([180, 60, 255])
-        cork_mask = cv2.inRange(hsv, cork_lower, cork_upper)
-        
-        # Combine all masks
+        # Combine red and blue only (no cork detection)
         combined_mask = cv2.bitwise_or(red_mask, blue_mask)
-        combined_mask = cv2.bitwise_or(combined_mask, cork_mask)
         
         # Find contours on combined mask
         contours, _ = cv2.findContours(combined_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -439,23 +431,18 @@ class FishingBotThread(threading.Thread):
             hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
             
             # Same strict thresholds as find_bobber
-            red_lower = np.array([0, 120, 100])
+            red_lower = np.array([0, 150, 120])
             red_upper = np.array([10, 255, 255])
             red_mask = cv2.inRange(hsv, red_lower, red_upper)
             red_pixels = np.sum(red_mask > 0)
             
-            blue_lower = np.array([90, 100, 100])
-            blue_upper = np.array([110, 255, 255])
+            blue_lower = np.array([95, 120, 100])
+            blue_upper = np.array([105, 255, 255])
             blue_mask = cv2.inRange(hsv, blue_lower, blue_upper)
             blue_pixels = np.sum(blue_mask > 0)
             
-            cork_lower = np.array([0, 0, 180])
-            cork_upper = np.array([180, 60, 255])
-            cork_mask = cv2.inRange(hsv, cork_lower, cork_upper)
-            cork_pixels = np.sum(cork_mask > 0)
-            
-            # Require at least 1 component with sufficient pixels
-            components_found = (red_pixels > 5) + (blue_pixels > 5) + (cork_pixels > 5)
+            # Require at least 1 component with sufficient pixels (NO CORK)
+            components_found = (red_pixels > 5) + (blue_pixels > 5)
             
             if components_found >= 1:
                 return True
