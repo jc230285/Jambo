@@ -1438,14 +1438,34 @@ function UI:EditCondition(idx)
         c.cdOp = c.cdOp or "<="
         c.cdVal = c.cdVal or 0
         
-        -- Item dropdown (items from Book)
+        -- Item dropdown (items from Book + special auto items)
         local items = {}
+        
+        -- Add special auto items first (in blue)
+        local autoItems = {
+            { text = "|cff0099ff[Auto] Worst Food|r", value = "AUTO:WORST_FOOD" },
+            { text = "|cff0099ff[Auto] Drink|r", value = "AUTO:DRINK" },
+            { text = "|cff0099ff[Auto] Health Potion|r", value = "AUTO:HEALTH_POTION" },
+            { text = "|cff0099ff[Auto] Mana Potion|r", value = "AUTO:MANA_POTION" },
+        }
+        for _, item in ipairs(autoItems) do
+            table.insert(items, { text = item.text, value = item.value, onSelect = function(val) c.itemName = val end })
+        end
+        
+        -- Add regular items from Book
         for _, d in pairs(NS.Book or {}) do
             if d and d.type == "ITEM" and d.name then
                 table.insert(items, { text = d.name, value = d.name, onSelect = function(val) c.itemName = val end })
             end
         end
-        table.sort(items, function(a, b) return a.text < b.text end)
+        table.sort(items, function(a, b) 
+            -- Keep auto items at top, sort regular items alphabetically
+            local aIsAuto = a.value and a.value:find("^AUTO:")
+            local bIsAuto = b.value and b.value:find("^AUTO:")
+            if aIsAuto and not bIsAuto then return true
+            elseif not aIsAuto and bIsAuto then return false
+            else return a.text < b.text end
+        end)
         if #items == 0 then
             table.insert(items, { text = "(No items found)", value = nil, onSelect = function() end })
         end
