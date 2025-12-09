@@ -64,6 +64,7 @@ function Data:BuildBook()
                     rank = realRank,
                     icon = info.ICON,
                     range = info.RANGE,
+                    equipped = info.EQUIPPED,  -- Track if item is equipped
                 }
 
                 if info.TYPE == "SPELL" then

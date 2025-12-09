@@ -502,6 +502,65 @@ function E:CheckUnitTarget(c)
     return true, "Pass"
 end
 
+function E:CheckItem(c)
+    if not c.itemName then return false, "NoItemName" end
+    
+    -- Get item data from Book
+    local itemData = NS.Book[c.itemName]
+    if not itemData or itemData.type ~= "ITEM" then 
+        return false, "ItemNotFound" 
+    end
+    
+    local itemID = itemData.id
+    
+    -- Check item count (with optional charges)
+    if c.checkCount then
+        local count = GetItemCount(itemID, c.includeCharges or false)
+        local countVal = c.countVal or 1
+        local countOp = c.countOp or ">="
+        
+        local pass = false
+        if countOp == ">=" then pass = count >= countVal
+        elseif countOp == ">" then pass = count > countVal
+        elseif countOp == "<=" then pass = count <= countVal
+        elseif countOp == "<" then pass = count < countVal
+        elseif countOp == "==" then pass = count == countVal
+        elseif countOp == "~=" then pass = count ~= countVal
+        end
+        
+        if not pass then
+            return false, "Count:" .. count .. countOp .. countVal
+        end
+    end
+    
+    -- Check cooldown (returns 0 if off CD)
+    if c.checkCooldown then
+        local start, duration = GetItemCooldown(itemID)
+        local cd = (duration and duration > 0) and ((start + duration) - GetTime()) or 0
+        local cdVal = c.cdVal or 0
+        local cdOp = c.cdOp or "<="
+        
+        local pass = false
+        if cdOp == ">=" then pass = cd >= cdVal
+        elseif cdOp == ">" then pass = cd > cdVal
+        elseif cdOp == "<=" then pass = cd <= cdVal
+        elseif cdOp == "<" then pass = cd < cdVal
+        elseif cdOp == "==" then pass = math.abs(cd - cdVal) < 0.1
+        elseif cdOp == "~=" then pass = math.abs(cd - cdVal) >= 0.1
+        end
+        
+        if not pass then
+            return false, "CD:" .. string.format("%.1f", cd) .. cdOp .. cdVal
+        end
+    end
+    
+    local count = GetItemCount(itemID, c.includeCharges or false)
+    local start, duration = GetItemCooldown(itemID)
+    local cd = (duration and duration > 0) and ((start + duration) - GetTime()) or 0
+    
+    return true, string.format("Count:%d CD:%.1fs", count, cd)
+end
+
 function E:EvaluateStep(step)
     if step and step.disabled then return false, "Disabled" end
     local ready, msg = E:CheckSpell(step)
@@ -513,6 +572,7 @@ function E:EvaluateStep(step)
             if cond.type == "RESOURCE" then pass, val = E:CheckResource(cond)
             elseif cond.type == "AURA" then pass, val = E:CheckAura(cond)
             elseif cond.type == "SPELL" then pass, val = E:CheckSpellCond(cond, step)
+            elseif cond.type == "ITEM" then pass, val = E:CheckItem(cond)
             elseif cond.type == "UNIT" then pass, val = E:CheckUnitTarget(cond)
             elseif cond.type == "PLAYER" then pass, val = E:CheckUnit(cond)
             else pass, val = false, "BadType" end

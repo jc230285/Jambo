@@ -525,6 +525,16 @@ function UI:RefreshConds()
                 if c.chkCharges then table.insert(checks, "Chg" .. (c.chargesOp or "") .. (c.chargesVal or "")) end
                 local checkStr = #checks > 0 and (" [" .. table.concat(checks, ",") .. "]") or ""
                 txt = string.format("SPELL:%s%s", spellName, checkStr)
+            elseif c.type == "ITEM" then
+                local itemName = c.itemName or "?"
+                local checks = {}
+                if c.checkCount then 
+                    local inc = c.includeCharges and "+Charges" or ""
+                    table.insert(checks, "Count" .. (c.countOp or "") .. (c.countVal or "") .. inc) 
+                end
+                if c.checkCooldown then table.insert(checks, "CD" .. (c.cdOp or "") .. (c.cdVal or "")) end
+                local checkStr = #checks > 0 and (" [" .. table.concat(checks, ",") .. "]") or ""
+                txt = string.format("ITEM:%s%s", itemName, checkStr)
             elseif c.type == "PLAYER" then
                 txt = "PLAYER:"
                 local checks = {}
@@ -771,6 +781,49 @@ function UI:CreateEditor(parent)
     ce.grpSpell.info:SetJustifyH("LEFT")
     ce.grpSpell.info:SetText("--")
 
+    -- Item group
+    ce.grpItem = CreateFrame("Frame", nil, ce)
+    ce.grpItem:SetAllPoints()
+    
+    -- Item name label and picker
+    local itemLbl = ce.grpItem:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    itemLbl:SetPoint("TOPLEFT", 10, -40)
+    itemLbl:SetText("Item:")
+    
+    ce.grpItem.itemName = newDropdown(ce.grpItem, 200, "Item")
+    ce.grpItem.itemName:SetPoint("TOPLEFT", 60, -50)
+    
+    -- Item count check
+    ce.grpItem.countChk = newCheck(ce.grpItem, "Check Count")
+    ce.grpItem.countChk:SetPoint("TOPLEFT", 10, -80)
+    
+    ce.grpItem.countOp = newDropdown(ce.grpItem, 60, "Op")
+    ce.grpItem.countOp:SetPoint("TOPLEFT", 120, -90)
+    
+    ce.grpItem.countVal = newEditBox(ce.grpItem, 50)
+    ce.grpItem.countVal:SetPoint("TOPLEFT", 190, -92)
+    
+    -- Include charges checkbox
+    ce.grpItem.includeCharges = newCheck(ce.grpItem, "Include Charges")
+    ce.grpItem.includeCharges:SetPoint("TOPLEFT", 250, -80)
+    
+    -- Cooldown check
+    ce.grpItem.cdChk = newCheck(ce.grpItem, "Check Cooldown")
+    ce.grpItem.cdChk:SetPoint("TOPLEFT", 10, -120)
+    
+    ce.grpItem.cdOp = newDropdown(ce.grpItem, 60, "Op")
+    ce.grpItem.cdOp:SetPoint("TOPLEFT", 140, -130)
+    
+    ce.grpItem.cdVal = newEditBox(ce.grpItem, 50)
+    ce.grpItem.cdVal:SetPoint("TOPLEFT", 210, -132)
+    
+    -- Info/debug line
+    ce.grpItem.info = ce.grpItem:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    ce.grpItem.info:SetPoint("TOPLEFT", 10, -160)
+    ce.grpItem.info:SetWidth(450)
+    ce.grpItem.info:SetJustifyH("LEFT")
+    ce.grpItem.info:SetText("--")
+
     -- Player/Unit group
     ce.grpUnit = CreateFrame("Frame", nil, ce)
     ce.grpUnit:SetAllPoints()
@@ -896,7 +949,7 @@ function UI:EditCondition(idx)
     UI:UpdateCondDebug()
 
     local function toggleGroup(which)
-        ce.grpRes:Hide(); ce.grpAura:Hide(); ce.grpSpell:Hide(); ce.grpUnit:Hide(); ce.grpUnitTarget:Hide()
+        ce.grpRes:Hide(); ce.grpAura:Hide(); ce.grpSpell:Hide(); ce.grpItem:Hide(); ce.grpUnit:Hide(); ce.grpUnitTarget:Hide()
         if which then which:Show() end
     end
 
@@ -904,6 +957,7 @@ function UI:EditCondition(idx)
         { text = "RESOURCE", value = "RESOURCE", onSelect = function() c.type = "RESOURCE"; UI:EditCondition(idx) end },
         { text = "AURA", value = "AURA", onSelect = function() c.type = "AURA"; UI:EditCondition(idx) end },
         { text = "SPELL", value = "SPELL", onSelect = function() c.type = "SPELL"; UI:EditCondition(idx) end },
+        { text = "ITEM", value = "ITEM", onSelect = function() c.type = "ITEM"; UI:EditCondition(idx) end },
         { text = "PLAYER", value = "PLAYER", onSelect = function() c.type = "PLAYER"; UI:EditCondition(idx) end },
         { text = "UNIT", value = "UNIT", onSelect = function() c.type = "UNIT"; UI:EditCondition(idx) end },
     })
@@ -1310,6 +1364,92 @@ function UI:EditCondition(idx)
         -- Update debug display
         UI:UpdateResourceDebug(c)
         UI:UpdateResourceDebug(c)
+        
+    elseif c.type == "ITEM" then
+        toggleGroup(ce.grpItem)
+        
+        -- Initialize defaults
+        c.itemName = c.itemName or nil
+        c.checkCount = c.checkCount or false
+        c.countOp = c.countOp or ">="
+        c.countVal = c.countVal or 1
+        c.includeCharges = c.includeCharges or false
+        c.checkCooldown = c.checkCooldown or false
+        c.cdOp = c.cdOp or "<="
+        c.cdVal = c.cdVal or 0
+        
+        -- Item dropdown (items from Book)
+        local items = {}
+        for _, d in pairs(NS.Book or {}) do
+            if d and d.type == "ITEM" and d.name then
+                table.insert(items, { text = d.name, value = d.name, onSelect = function(val) c.itemName = val end })
+            end
+        end
+        table.sort(items, function(a, b) return a.text < b.text end)
+        if #items == 0 then
+            table.insert(items, { text = "(No items found)", value = nil, onSelect = function() end })
+        end
+        setDropdownOptions(ce.grpItem.itemName, c.itemName or "(No items found)", items)
+        
+        -- Count check
+        ce.grpItem.countChk:SetChecked(c.checkCount)
+        ce.grpItem.countChk:SetScript("OnClick", function()
+            c.checkCount = ce.grpItem.countChk:GetChecked()
+            ce.grpItem.countOp:SetShown(c.checkCount)
+            ce.grpItem.countVal:SetShown(c.checkCount)
+            ce.grpItem.includeCharges:SetShown(c.checkCount)
+        end)
+        
+        local countOpItems = {}
+        for _, opt in ipairs(opOptions()) do
+            table.insert(countOpItems, { text = opt.text, value = opt.value, onSelect = function(val) c.countOp = val end })
+        end
+        setDropdownOptions(ce.grpItem.countOp, c.countOp or ">=", countOpItems)
+        ce.grpItem.countOp:SetShown(c.checkCount)
+        
+        ce.grpItem.countVal:SetText(tostring(c.countVal or 1))
+        ce.grpItem.countVal:SetScript("OnTextChanged", function(self)
+            c.countVal = tonumber(self:GetText()) or 1
+        end)
+        ce.grpItem.countVal:SetShown(c.checkCount)
+        
+        ce.grpItem.includeCharges:SetChecked(c.includeCharges)
+        ce.grpItem.includeCharges:SetScript("OnClick", function()
+            c.includeCharges = ce.grpItem.includeCharges:GetChecked()
+        end)
+        ce.grpItem.includeCharges:SetShown(c.checkCount)
+        
+        -- Cooldown check
+        ce.grpItem.cdChk:SetChecked(c.checkCooldown)
+        ce.grpItem.cdChk:SetScript("OnClick", function()
+            c.checkCooldown = ce.grpItem.cdChk:GetChecked()
+            ce.grpItem.cdOp:SetShown(c.checkCooldown)
+            ce.grpItem.cdVal:SetShown(c.checkCooldown)
+        end)
+        
+        local cdOpItems = {}
+        for _, opt in ipairs(opOptions()) do
+            table.insert(cdOpItems, { text = opt.text, value = opt.value, onSelect = function(val) c.cdOp = val end })
+        end
+        setDropdownOptions(ce.grpItem.cdOp, c.cdOp or "<=", cdOpItems)
+        ce.grpItem.cdOp:SetShown(c.checkCooldown)
+        
+        ce.grpItem.cdVal:SetText(tostring(c.cdVal or 0))
+        ce.grpItem.cdVal:SetScript("OnTextChanged", function(self)
+            c.cdVal = tonumber(self:GetText()) or 0
+        end)
+        ce.grpItem.cdVal:SetShown(c.checkCooldown)
+        
+        -- Info/debug line
+        local itemData = c.itemName and NS.Book[c.itemName]
+        if itemData then
+            local itemCount = GetItemCount(itemData.id, c.includeCharges)
+            local start, duration = GetItemCooldown(itemData.id)
+            local cd = (duration and duration > 0) and ((start + duration) - GetTime()) or 0
+            ce.grpItem.info:SetText(string.format("Count: %d | CD: %.1fs", itemCount, cd))
+        else
+            ce.grpItem.info:SetText("--")
+        end
         
     elseif c.type == "PLAYER" then
         toggleGroup(ce.grpUnit)

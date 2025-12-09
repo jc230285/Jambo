@@ -137,8 +137,10 @@ function J:FullScan()
         end
     end
     
-    -- 3. ITEMS
+    -- 3. ITEMS (Bags + Equipped Trinkets)
     local seenItems = {}
+    
+    -- Scan bags
     for bag = 0, 4 do
         for slot = 1, C_Container.GetContainerNumSlots(bag) do
             local info = C_Container.GetContainerItemInfo(bag, slot)
@@ -157,6 +159,26 @@ function J:FullScan()
                         })
                     end
                 end
+            end
+        end
+    end
+    
+    -- Scan equipped trinkets/items with usable effects
+    local equippedSlots = {13, 14}  -- Trinket slots
+    for _, slotID in ipairs(equippedSlots) do
+        local id = GetInventoryItemID("player", slotID)
+        if id and not seenItems[id] then
+            seenItems[id] = true
+            local name, link, _, _, _, _, _, _, _, icon = GetItemInfo(id)
+            local spellName, spellID = GetItemSpell(id)
+            if spellID then
+                local desc, heal, dmg = GetTooltipStats(link, true)
+                table.insert(masterList, {
+                    TYPE = "ITEM", NAME = name, ID = id, RANK = 1, LEVEL = 0,
+                    ICON = icon, DESC = desc, COST = 0, CAST = 0, RANGE = 0, SLOT = 0, KNOWN = true,
+                    HEAL_TOTAL = heal, DMG_TOTAL = dmg, HPS = heal, HPM = 0, DPS = dmg, DPM = 0,
+                    EQUIPPED = true  -- Mark as equipped
+                })
             end
         end
     end
