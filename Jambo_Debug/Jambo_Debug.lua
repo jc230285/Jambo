@@ -231,6 +231,28 @@ local function UpdateDebugInfo()
         table.insert(lines, "|cffff0000Fire Blast (20y) is OUT OF RANGE|r")
     end
     
+    -- Method 5c: Jambo Range Module (if available)
+    if _G.JamboRotation and _G.JamboRotation.Range then
+        table.insert(lines, "")
+        table.insert(lines, "|cff00ff00=== JAMBO RANGE MODULE ===|r")
+        local JR = _G.JamboRotation
+        local rangeStatus = JR.Range:GetRangeStatus(TEST_SPELL_NAME, "target")
+        local rangeNumeric = JR.Range:GetRangeNumeric(TEST_SPELL_NAME, "target")
+        local distance = JR.Range:EstimateDistance("target")
+        
+        table.insert(lines, "Status: " .. rangeStatus)
+        table.insert(lines, "Numeric: " .. tostring(rangeNumeric))
+        table.insert(lines, "Estimated Distance: " .. (distance and (distance .. " yards") or "nil"))
+        
+        if rangeStatus == "InRange" then
+            table.insert(lines, "|cff00ff00SPELL IS IN RANGE (20y)|r")
+        elseif rangeStatus == "OutOfRange" then
+            table.insert(lines, "|cffff0000SPELL OUT OF RANGE (20y)|r")
+        else
+            table.insert(lines, "|cffffff00No range limit or cannot determine|r")
+        end
+    end
+    
     -- Method 6: UnitInRange (party/raid only in Classic)
     table.insert(lines, "")
     local inRange = UnitInRange("target")

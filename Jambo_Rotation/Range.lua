@@ -88,11 +88,17 @@ function Range:IsSpellInRange(spellName, unit)
     -- This works for both alive and dead targets, extremely fast
     local maxRange = NS.Book and NS.Book[spellName] and NS.Book[spellName].range
     if not maxRange then
-        -- Default ranges for common spell types if not in book
-        if spellName:find("Auto Attack") then
-            maxRange = 5
+        -- Try to get from spell data
+        local spellData = NS.Book and NS.Book[spellName]
+        if spellData and spellData.range then
+            maxRange = spellData.range
         else
-            maxRange = 30 -- Assume typical caster range
+            -- Default ranges for common spell types if not in book
+            if spellName and spellName:find("Auto Attack") then
+                maxRange = 5
+            else
+                maxRange = 30 -- Assume typical caster range
+            end
         end
     end
     
