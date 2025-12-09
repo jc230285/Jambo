@@ -5,16 +5,16 @@ CONFIG_FILE = Path(__file__).parent / "square_config.json"
 POS_FILE = Path(__file__).parent / "square_pos.json"
 
 DEFAULT_CONFIG = {
-    "square_size": 50,
+    "square_size": 58,
     "cell_size": 10,
     "padding": 0,
     "root_dir": r"C:\Program Files (x86)\World of Warcraft\_classic_era_",
-    "selected_account": "",
-    "selected_character": "",
-    "window_x": 50,
-    "window_y": 50,
+    "selected_account": "JC230285",
+    "selected_character": "Spineshatter/Jambodru",
+    "window_x": 5,
+    "window_y": 582,
     "toggle_key": "`",
-    "toggle_vk": 192,  # 0xC0 - grave/tilde key
+    "toggle_vk": 223,  # Your recorded key
     "pos": [4, 0]  # Default square position [row, col]
 }
 
