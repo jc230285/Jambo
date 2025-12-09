@@ -197,14 +197,27 @@ function E:CheckSpellCond(c, step)
     end
 
     if c.chkRange then
-        local inRange = nil
         local unit = c.rangeUnit or "target"
+        if not UnitExists(unit) then 
+            return false, "NoUnit" 
+        end
+        
+        local inRange = nil
         if data.slot and data.slot > 0 then
-            inRange = IsActionInRange(data.slot)
+            inRange = IsActionInRange(data.slot, unit)
         else
             inRange = IsSpellInRange(data.name, unit)
         end
-        if inRange == 0 then return false, "Range" end
+        
+        -- inRange: 1=in range, 0=out of range, nil=no range limit
+        -- If spell has a range and we're out of range, fail
+        if inRange == 0 and data.range and data.range > 0 then 
+            return false, "OutOfRange" 
+        end
+        -- If inRange is nil but spell has a range, assume out of range to be safe
+        if inRange == nil and data.range and data.range > 0 then
+            return false, "Range?" 
+        end
     end
 
     local parts = {}
