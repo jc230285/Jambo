@@ -298,6 +298,14 @@ class OptionsWindow(tk.Toplevel):
         # Set Square Area at the top
         tk.Button(self, text="Set Square Area", bg="#0055aa", fg="white", command=self.parent._set_square).pack(fill="x", **pad)
         
+        # Toggle Key Recorder
+        toggle_frame = tk.Frame(self, bg="#222"); toggle_frame.pack(fill="x", **pad)
+        tk.Label(toggle_frame, text="Toggle Key:", bg="#222", fg="#eee", font=("Consolas", 10)).pack(side="left")
+        self.btn_record_key = tk.Button(toggle_frame, text="Click & Press Key", bg="#aa5500", fg="white", command=self._start_key_record)
+        self.btn_record_key.pack(side="left", padx=(5,0))
+        self.lbl_toggle_key = tk.Label(toggle_frame, text=f"VK: {self.parent.config_data.get('toggle_vk', 192)}", bg="#333", fg="#0f0", font=("Consolas", 9), padx=5)
+        self.lbl_toggle_key.pack(side="left", padx=(5,0))
+        
         # WoW Folder
         ttk.Label(self, text="WoW Folder:").pack(anchor="w", **pad)
         folder_frame = tk.Frame(self, bg="#222"); folder_frame.pack(fill="x", **pad)
@@ -321,6 +329,40 @@ class OptionsWindow(tk.Toplevel):
         ttk.Label(self, text="Character:").pack(anchor="w", **pad)
         self.cb_char = ttk.Combobox(self, state="readonly"); self.cb_char.pack(fill="x", **pad)
         self.cb_char.bind("<<ComboboxSelected>>", self._on_char_change)
+        
+        # Key recording state
+        self._recording_key = False
+    
+    def _start_key_record(self):
+        self._recording_key = True
+        self.btn_record_key.config(bg="#ff0000", text="Press any key...")
+        self.after(50, self._check_for_key)
+    
+    def _check_for_key(self):
+        if not self._recording_key:
+            return
+        
+        # Check all possible VK codes
+        for vk in range(8, 256):
+            try:
+                state = win32api.GetAsyncKeyState(vk) & 0x8000
+                if state:
+                    # Key detected!
+                    self._recording_key = False
+                    self.parent.config_data['toggle_vk'] = vk
+                    cfg.save(self.parent.config_data)
+                    self.parent.toggle_vk = vk
+                    self.btn_record_key.config(bg="#00aa00", text="Key Recorded!")
+                    self.lbl_toggle_key.config(text=f"VK: {vk}")
+                    print(f"[OPTIONS] Recorded toggle key: VK {vk}")
+                    # Reset button after 1 second
+                    self.after(1000, lambda: self.btn_record_key.config(bg="#aa5500", text="Click & Press Key"))
+                    return
+            except Exception:
+                pass
+        
+        # Check again in 50ms
+        self.after(50, self._check_for_key)
 
     def _load_values(self):
         root = self.parent.config_data.get("root_dir", "")
@@ -673,21 +715,21 @@ class Overlay(tk.Tk):
     def _key_monitor_loop(self):
         # Dedicated thread to monitor the toggle key at higher frequency
         last_state = 0
-        print("[DEBUG] Key monitor thread started - watching VK 192 (grave key)")
+        print("[DEBUG] Key monitor thread started - watching toggle key from config")
         while True:
             try:
-                # Always use grave key (192 = 0xC0) - no auto-detection
-                vk = 192  # Grave/tilde key only
+                # Use toggle key from config (default to 192 = grave key)
+                vk = int(self.config_data.get('toggle_vk', 192) or 192)
                 
                 state = win32api.GetAsyncKeyState(vk) & 0x8000
                 
                 # Debug output when key state changes
                 if state != last_state:
-                    print(f"[DEBUG] Grave key state changed: {last_state} -> {state}")
+                    print(f"[DEBUG] Toggle key VK {vk} state changed: {last_state} -> {state}")
                 
                 # rising edge -> toggle ability
                 if state and not last_state:
-                    print("[DEBUG] Grave key pressed - toggling ability")
+                    print(f"[DEBUG] Toggle key VK {vk} pressed - toggling ability")
                     self.auto_ability = not self.auto_ability
                     # schedule UI update on main thread
                     try:
@@ -739,8 +781,9 @@ class Overlay(tk.Tk):
                             prev = self._hook_last_state.get(vk, False)
                             if not prev:
                                 # rising edge, handle toggle and pause
-                                # Only grave key (192 = 0xC0) - no auto-detection
-                                if vk == 192:
+                                # Use configured toggle key (default to 192 = grave key)
+                                toggle_vk = int(self.config_data.get('toggle_vk', 192) or 192)
+                                if vk == toggle_vk:
                                     # toggle ability on keydown
                                     self.auto_ability = not self.auto_ability
                                     # force auto target off
@@ -756,8 +799,9 @@ class Overlay(tk.Tk):
                         elif wParam == WM_KEYUP or wParam == WM_SYSKEYUP:
                             # Key released
                             self._hook_last_state[vk] = False
-                            # Only grave key (192 = 0xC0)
-                            if vk == 192:
+                            # Use configured toggle key (default to 192 = grave key)
+                            toggle_vk = int(self.config_data.get('toggle_vk', 192) or 192)
+                            if vk == toggle_vk:
                                 self.pause_targeting = False
                 except Exception:
                     pass
