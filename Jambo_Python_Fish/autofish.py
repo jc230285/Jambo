@@ -190,6 +190,11 @@ class FishingBotThread(threading.Thread):
                     except Exception:
                         pass
 
+                # CRITICAL: Wait for bobber to settle after cast before watching for splash
+                # The initial bobber landing creates movement that would trigger false splash
+                self.update_log("Waiting for bobber to settle...")
+                time.sleep(2.0)  # Give bobber time to land and settle
+                
                 splash_detected = self.watch_bobber(bobber_loc)
                 
                 if splash_detected:
@@ -278,9 +283,9 @@ class FishingBotThread(threading.Thread):
         combined_mask = cv2.bitwise_or(red_mask, blue_mask)
         
         # CRITICAL: Use morphological opening to remove large connected areas (water)
-        # Increase erosion to 4 iterations to more aggressively break up water
-        kernel = np.ones((5,5), np.uint8)  # Larger kernel (was 3x3)
-        combined_mask = cv2.erode(combined_mask, kernel, iterations=4)  # More erosion (was 2)
+        # Balance: enough erosion to break up water, but preserve bobber
+        kernel = np.ones((4,4), np.uint8)  # Moderate kernel size
+        combined_mask = cv2.erode(combined_mask, kernel, iterations=3)  # Moderate erosion
         combined_mask = cv2.dilate(combined_mask, kernel, iterations=2)  # Restore small objects
         
         # Find contours after morphological cleanup
@@ -291,16 +296,24 @@ class FishingBotThread(threading.Thread):
         
         print(f"Total contours found: {len(contours)}")
         
+        zone_height = img.shape[0]
+        zone_width = img.shape[1]
+        
         for cnt in contours:
             area = cv2.contourArea(cnt)
-            if area < 15:  # Too small
-                print(f"  Rejected: area {area:.1f} < 15")
+            if area < 20:  # Too small (increased from 15)
+                print(f"  Rejected: area {area:.1f} < 20")
                 continue
             if area > 500:  # Too large - probably detecting water/background
                 print(f"  Rejected: area {area:.1f} > 500")
                 continue
             
             x, y, w, h = cv2.boundingRect(cnt)
+            
+            # Reject if touching top/bottom edges (likely clipped bobber)
+            if y < 5 or y + h > zone_height - 5:
+                print(f"  Rejected: touching edge at y={y}, h={h}, zone_height={zone_height}")
+                continue
             
             # Reject if too wide or too tall
             if w > 100 or h > 100:
