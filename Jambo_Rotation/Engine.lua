@@ -28,7 +28,7 @@ function E:CheckSpell(step)
     end
 
     if data.slot and data.slot > 0 and UnitExists("target") then
-        local inRange = IsActionInRange(data.slot)
+        local inRange = IsActionInRange(data.slot, "target")
         if inRange == 0 then return false, "Range" end
     end
     return true, "Ready"

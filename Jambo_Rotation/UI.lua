@@ -373,11 +373,13 @@ function UI:CreateRightPanel()
 
         r.txt = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         r.txt:SetPoint("LEFT", 14, 0)
-        r.txt:SetPoint("RIGHT", -40, 0)
+        r.txt:SetPoint("RIGHT", -100, 0)
         r.txt:SetJustifyH("LEFT")
 
         r.val = r:CreateFontString(nil, "OVERLAY", "GameFontNormalTiny")
-        r.val:SetPoint("RIGHT", -6, 0)
+        r.val:SetPoint("RIGHT", -30, 0)
+        r.val:SetWidth(90)
+        r.val:SetJustifyH("LEFT")
         r.val:SetTextColor(0, 0.9, 0.9)
 
         r.del = CreateFrame("Button", nil, r, "UIPanelButtonTemplate")
