@@ -270,13 +270,13 @@ class FishingBotThread(threading.Thread):
         # NEW STRATEGY: Look for the distinctive red-blue transition at bobber top
         # This is more reliable than trying to filter out all water
         
-        # 1. Detect RED fin (top of bobber)
-        red_lower = np.array([0, 80, 100])
-        red_upper = np.array([15, 255, 255])
+        # 1. Detect RED fin (top of bobber) - LOWER saturation for shadowed/dull reds
+        red_lower = np.array([0, 50, 80])  # Sat 50+ (was 80), Value 80+ (was 100)
+        red_upper = np.array([20, 255, 255])  # Wider hue range to catch orange/brown tones
         red_mask = cv2.inRange(hsv, red_lower, red_upper)
         
         # 2. Detect BLUE body (below red fin)
-        blue_lower = np.array([95, 80, 80])  # Lower saturation to catch more
+        blue_lower = np.array([95, 70, 70])  # Even lower sat/value for shadowed areas
         blue_upper = np.array([110, 255, 255])
         blue_mask = cv2.inRange(hsv, blue_lower, blue_upper)
         
