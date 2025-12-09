@@ -570,7 +570,7 @@ function E:CheckItem(c)
     
     -- Check cooldown (returns 0 if off CD)
     if c.checkCooldown then
-        local start, duration = GetItemCooldown(itemID)
+        local start, duration = C_Container.GetItemCooldown(itemID)
         local cd = (duration and duration > 0) and ((start + duration) - GetTime()) or 0
         local cdVal = c.cdVal or 0
         local cdOp = c.cdOp or "<="
@@ -590,7 +590,7 @@ function E:CheckItem(c)
     end
     
     local count = GetItemCount(itemID, c.includeCharges or false)
-    local start, duration = GetItemCooldown(itemID)
+    local start, duration = C_Container.GetItemCooldown(itemID)
     local cd = (duration and duration > 0) and ((start + duration) - GetTime()) or 0
     
     return true, string.format("Count:%d CD:%.1fs", count, cd)
