@@ -262,7 +262,44 @@ local function UpdateDebugInfo()
         end
     end
     
-    -- Method 5c: Estimated 20-yard range
+    -- Method 5c: IsSpellInRange API Test (Anniversary Edition)
+    table.insert(lines, "")
+    table.insert(lines, "|cff00ff00=== IsSpellInRange API TEST ===|r")
+    if IsSpellInRange then
+        table.insert(lines, "IsSpellInRange: |cff00ff00EXISTS|r")
+        
+        local spellRange = IsSpellInRange(TEST_SPELL_NAME, "target")
+        local rangeStr = "nil"
+        local color = "|cffaaaaaa"
+        if spellRange == 1 then 
+            rangeStr = "1 (IN RANGE)"
+            color = "|cff00ff00"
+        elseif spellRange == 0 then 
+            rangeStr = "0 (OUT OF RANGE)"
+            color = "|cffff0000"
+        end
+        table.insert(lines, color .. "IsSpellInRange('" .. TEST_SPELL_NAME .. "', 'target'): " .. rangeStr .. "|r")
+        
+        -- Test all spells
+        for _, spell in ipairs(TEST_SPELLS) do
+            local sr = IsSpellInRange(spell.name, "target")
+            local srStr = "nil"
+            local srColor = "|cffaaaaaa"
+            if sr == 1 then 
+                srStr = "IN"
+                srColor = "|cff00ff00"
+            elseif sr == 0 then 
+                srStr = "OUT"
+                srColor = "|cffff0000"
+            end
+            table.insert(lines, srColor .. "  " .. spell.name .. " (" .. spell.range .. "y): " .. srStr .. "|r")
+        end
+    else
+        table.insert(lines, "IsSpellInRange: |cffff0000DOES NOT EXIST|r")
+        table.insert(lines, "|cffffff00Classic Anniversary may not have this API|r")
+    end
+    
+    -- Method 5d: Estimated 20-yard range
     table.insert(lines, "")
     table.insert(lines, "|cff00ff00=== 20 YARD ESTIMATE ===|r")
     if CheckInteractDistance("target", 4) then
