@@ -724,7 +724,7 @@ class Overlay(tk.Tk):
         # Dedicated thread to monitor the toggle key at higher frequency
         last_state = 0
         last_toggle_time = 0
-        DEBOUNCE_MS = 200  # 200ms debounce to prevent double-toggle
+        DEBOUNCE_MS = 1000  # 1000ms (1 second) debounce to prevent double-toggle
         print("[DEBUG] Key monitor thread started - watching toggle key from config")
         while True:
             try:
