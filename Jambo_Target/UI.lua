@@ -129,6 +129,21 @@ function UI:Init()
     SkinFrame(frame)
     
     local savedPos = NS.db.options.targetFrameOffset
+    -- Validate position is on screen
+    local screenWidth = GetScreenWidth()
+    local screenHeight = GetScreenHeight()
+    local frameWidth = C.FRAME_WIDTH * 0.8  -- Account for scale
+    local frameHeight = 600 * 0.8
+    if savedPos.x and savedPos.y then
+        local px, py = UIParent:GetCenter()
+        local cx, cy = px + savedPos.x, py + savedPos.y
+        -- Check if frame would be mostly off screen
+        if cx < -frameWidth/2 or cx > screenWidth + frameWidth/2 or cy < -frameHeight/2 or cy > screenHeight + frameHeight/2 then
+            -- Reset to center
+            savedPos = {x = 0, y = 0}
+            NS.db.options.targetFrameOffset = savedPos
+        end
+    end
     frame:SetPoint("CENTER", UIParent, "CENTER", savedPos.x, savedPos.y)
     
     frame:SetMovable(true)
@@ -136,12 +151,14 @@ function UI:Init()
     frame:SetScript("OnDragStart", frame.StartMoving)
     frame:SetScript("OnDragStop", function(self) 
         self:StopMovingOrSizing()
+        self:SetClampedToScreen(true)
         local cx,cy = self:GetCenter()
         local px,py = UIParent:GetCenter()
         if cx then 
             NS.db.options.targetFrameOffset={x=cx-px,y=cy-py}
         end
     end)
+    frame:SetClampedToScreen(true)
     NS.UI.frame = frame
     
     local toggleBtn = CreateFrame("Button", nil, frame)
