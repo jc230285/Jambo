@@ -419,6 +419,41 @@ function JG:EquipItem(itemData, slotName)
     return false
 end
 
+function JG:SwapToOptimalGear(specName)
+    if InCombatLockdown() then
+        if self.db.profile.showMessages then
+            self:Print("Cannot swap gear in combat. Swap queued.")
+        end
+        self.pendingGearSwap = specName
+        return
+    end
+    
+    local classConfig = self:GetCurrentClassConfig()
+    if not classConfig or not classConfig.gearSets then
+        self:Print("No gear sets configured.")
+        return
+    end
+    
+    local gearSet = classConfig.gearSets[specName]
+    if not gearSet then
+        self:Print("Gear set '" .. tostring(specName) .. "' not found.")
+        return
+    end
+    
+    local equippedCount = 0
+    for slotName, itemData in pairs(gearSet) do
+        if slotName ~= "meta" and itemData and itemData.link then
+            if self:EquipItem(itemData, slotName) then
+                equippedCount = equippedCount + 1
+            end
+        end
+    end
+    
+    if self.db.profile.showMessages then
+        self:Print("Equipped " .. equippedCount .. " items for " .. specName .. ".")
+    end
+end
+
 -- ==========================================================
 -- 6. AUTOMATION LOGIC
 -- ==========================================================
