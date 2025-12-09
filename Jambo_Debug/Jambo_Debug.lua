@@ -49,7 +49,13 @@ info:SetMaxLetters(0)
 info:EnableMouse(true)
 info:SetScript("OnEscapePressed", function() info:ClearFocus() end)
 
--- Test spell data (Fire Blast)
+-- Test spell data - multiple spells with different ranges
+local TEST_SPELLS = {
+    {name = "Fire Blast", id = 2136, range = 20},
+    {name = "Frostbolt", id = 116, range = 30},
+    {name = "Scorch", id = 2948, range = 30},
+    {name = "Fireball", id = 133, range = 35},
+}
 local TEST_SPELL_NAME = "Fire Blast"
 local TEST_SPELL_ID = 2136
 
@@ -217,14 +223,55 @@ local function UpdateDebugInfo()
         table.insert(lines, "  |cffff0000SPELL OUT OF RANGE (20y)|r")
     end
     
-    -- Method 5b: Estimated 20-yard range
+    -- Method 5b: Multi-spell range testing
+    table.insert(lines, "")
+    table.insert(lines, "|cff00ff00=== MULTI-SPELL RANGE TEST ===|r")
+    
+    for _, spell in ipairs(TEST_SPELLS) do
+        -- Find spell on action bar
+        local spellSlot = nil
+        for slot = 1, 120 do
+            local actionType, id = GetActionInfo(slot)
+            if actionType == "spell" then
+                GameTooltip:SetOwner(UIParent, "ANCHOR_NONE")
+                GameTooltip:SetAction(slot)
+                local actionName = GameTooltipTextLeft1:GetText()
+                GameTooltip:Hide()
+                
+                if actionName and string.find(string.lower(actionName), string.lower(spell.name)) then
+                    spellSlot = slot
+                    break
+                end
+            end
+        end
+        
+        if spellSlot then
+            local inRange = IsActionInRange(spellSlot, "target")
+            local rangeStr = "nil"
+            local color = "|cffaaaaaa"
+            if inRange == 1 then 
+                rangeStr = "IN RANGE"
+                color = "|cff00ff00"
+            elseif inRange == 0 then 
+                rangeStr = "OUT OF RANGE"
+                color = "|cffff0000"
+            end
+            table.insert(lines, color .. spell.name .. " (" .. spell.range .. "y): " .. rangeStr .. "|r")
+        else
+            table.insert(lines, "|cffaaaaaa" .. spell.name .. " (" .. spell.range .. "y): NOT ON ACTION BAR|r")
+        end
+    end
+    
+    -- Method 5c: Estimated 20-yard range
     table.insert(lines, "")
     table.insert(lines, "|cff00ff00=== 20 YARD ESTIMATE ===|r")
     if CheckInteractDistance("target", 4) then
         table.insert(lines, "|cff00ff00Target is within 28 yards|r")
-        table.insert(lines, "|cff00ff00Fire Blast (20y) should be IN RANGE|r")
+        table.insert(lines, "|cffffff00Fire Blast (20y) MIGHT be in range|r")
         if not CheckInteractDistance("target", 3) then
-            table.insert(lines, "|cffffff00(Between 10-28 yards)|r")
+            table.insert(lines, "|cffffff00(Between 10-28 yards - uncertain)|r")
+        else
+            table.insert(lines, "|cff00ff00(Within 10 yards - DEFINITELY in range)|r")
         end
     else
         table.insert(lines, "|cffff0000Target is beyond 28 yards|r")
@@ -286,17 +333,18 @@ local function UpdateDebugInfo()
     -- Additional info
     table.insert(lines, "")
     table.insert(lines, "|cff00ff00=== ADDITIONAL INFO ===|r")
-    table.insert(lines, "To test range:")
-    table.insert(lines, "1. Put Fire Blast on action bar")
+    table.insert(lines, "To test multi-spell range:")
+    table.insert(lines, "1. Put Fire Blast, Frostbolt, Scorch, Fireball on action bar")
     table.insert(lines, "2. Target a LIVING enemy (not dead)")
     table.insert(lines, "3. Walk toward/away from target")
-    table.insert(lines, "4. Watch IsActionInRange values")
+    table.insert(lines, "4. Watch when each spell changes to IN/OUT RANGE")
     table.insert(lines, "")
-    table.insert(lines, "Expected Fire Blast range: 20 yards")
+    table.insert(lines, "Expected ranges:")
+    table.insert(lines, "  Fire Blast: 20y | Frostbolt/Scorch: 30y | Fireball: 35y")
     table.insert(lines, "")
-    table.insert(lines, "|cffaaaaaa** IsActionInRange only works on ALIVE targets **|r")
-    table.insert(lines, "|cffaaaaaa** Use CheckInteractDistance(target,4) for dead targets **|r")
-    table.insert(lines, "|cffaaaaaa** Follow range (28y) > Fire Blast range (20y) **|r")
+    table.insert(lines, "|cffff0000ISSUE: IsActionInRange returns nil in Classic!|r")
+    table.insert(lines, "|cffffff00This is a known WoW Classic API limitation.|r")
+    table.insert(lines, "|cffffff00Only CheckInteractDistance (10y/28y) works reliably.|r")
     table.insert(lines, "")
     table.insert(lines, "|cffaaaaaa(Click text to select/copy)|r")
     

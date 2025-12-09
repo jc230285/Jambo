@@ -115,17 +115,17 @@ JG.ClassStatWeights = {
         Arcane = {
             primary = {Intellect = 1.0, SpellPower = 1.0, SpellHit = 0.9, SpellCrit = 0.7},
             secondary = {Stamina = 0.5, Spirit = 0.4, MP5 = 0.6},
-            tertiary = {Strength = 0.1, Haste = 0.5}
+            tertiary = {Strength = 0.1, Haste = 0.5, Armor = 0.1}
         },
         Fire = {
             primary = {Intellect = 1.0, SpellPower = 1.0, SpellCrit = 0.9, SpellHit = 0.8},
             secondary = {Stamina = 0.5, Spirit = 0.4, MP5 = 0.5},
-            tertiary = {Strength = 0.1, Haste = 0.6}
+            tertiary = {Strength = 0.1, Haste = 0.6, Armor = 0.1}
         },
         Frost = {
             primary = {Intellect = 1.0, SpellPower = 1.0, SpellHit = 0.8, SpellCrit = 0.7},
             secondary = {Stamina = 0.6, Spirit = 0.4, MP5 = 0.5},
-            tertiary = {Strength = 0.1, Haste = 0.4}
+            tertiary = {Strength = 0.1, Haste = 0.4, Armor = 0.1}
         }
     },
     WARLOCK = {
