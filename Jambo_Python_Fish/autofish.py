@@ -261,21 +261,22 @@ class FishingBotThread(threading.Thread):
         img = self.capture_zone()
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         
-        # Focus ONLY on vibrant red and blue - ignore white/cork for now
-        # This should eliminate false positives from water reflections/sky
+        # Detect bobber colors - balanced to avoid water but catch actual bobber
+        # Based on WoW fishing bobber: red/orange fin, cyan/blue body
         
-        # 1. Red fin - VERY vibrant red only
-        red_lower = np.array([0, 150, 120])  # Much higher saturation requirement
-        red_upper = np.array([10, 255, 255])
+        # 1. Red/Orange fin - moderately saturated (in-game lighting affects this)
+        red_lower = np.array([0, 80, 100])  # Sat 80+ to allow for lighting/shadows
+        red_upper = np.array([15, 255, 255])  # Include orange tones (hue up to 15)
         red_mask = cv2.inRange(hsv, red_lower, red_upper)
         
-        # 2. Blue/Teal body - vibrant cyan/blue ONLY
-        # Narrower hue range, very high saturation to avoid water
-        blue_lower = np.array([95, 120, 100])  # Even higher saturation
-        blue_upper = np.array([105, 255, 255])  # Narrower hue range
+        # 2. Blue/Teal body - moderately saturated cyan
+        # Water is typically hue 100-110 with sat 30-60
+        # Bobber should be hue 95-110 with sat 60+
+        blue_lower = np.array([95, 60, 80])  # Sat 60+ to exclude dull water
+        blue_upper = np.array([110, 255, 255])
         blue_mask = cv2.inRange(hsv, blue_lower, blue_upper)
         
-        # Combine red and blue only (no cork detection)
+        # Combine red and blue (no cork for now to avoid sky reflections)
         combined_mask = cv2.bitwise_or(red_mask, blue_mask)
         
         # Find contours on combined mask
@@ -430,14 +431,14 @@ class FishingBotThread(threading.Thread):
             bgr = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
             hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
             
-            # Same strict thresholds as find_bobber
-            red_lower = np.array([0, 150, 120])
-            red_upper = np.array([10, 255, 255])
+            # Same thresholds as find_bobber - balanced for in-game lighting
+            red_lower = np.array([0, 80, 100])
+            red_upper = np.array([15, 255, 255])
             red_mask = cv2.inRange(hsv, red_lower, red_upper)
             red_pixels = np.sum(red_mask > 0)
             
-            blue_lower = np.array([95, 120, 100])
-            blue_upper = np.array([105, 255, 255])
+            blue_lower = np.array([95, 60, 80])
+            blue_upper = np.array([110, 255, 255])
             blue_mask = cv2.inRange(hsv, blue_lower, blue_upper)
             blue_pixels = np.sum(blue_mask > 0)
             
