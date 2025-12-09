@@ -90,6 +90,62 @@ def send_key(key, duration=0.05):
         if "CTRL" in parts[0].upper(): modifiers.append(win32con.VK_CONTROL)
         if "ALT" in parts[0].upper(): modifiers.append(win32con.VK_MENU)
 
+    # If key refers to a mouse button (e.g. BUTTON1, BUTTON2, BUTTON4), send mouse messages
+    k_upper = key.upper()
+    if k_upper.startswith("BUTTON"):
+        try:
+            btn_num = int(k_upper.replace("BUTTON", ""))
+        except Exception:
+            print(f"[Input] Error: Unknown Mouse Button '{key}'")
+            return
+
+        # Compute center of window for click coordinates
+        try:
+            rect = win32gui.GetWindowRect(hwnd)
+            left, top, right, bottom = rect
+            cx = (right - left) // 2
+            cy = (bottom - top) // 2
+            lparam = win32api.MAKELONG(cx, cy)
+        except Exception:
+            cx = 1; cy = 1
+            lparam = win32api.MAKELONG(cx, cy)
+
+        # Press Modifiers first
+        for mod in modifiers:
+            win32api.PostMessage(hwnd, win32con.WM_KEYDOWN, mod, 0)
+
+        # Dispatch mouse button messages
+        if btn_num == 1:
+            win32api.PostMessage(hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lparam)
+            time.sleep(duration)
+            win32api.PostMessage(hwnd, win32con.WM_LBUTTONUP, 0, lparam)
+        elif btn_num == 2:
+            win32api.PostMessage(hwnd, win32con.WM_RBUTTONDOWN, win32con.MK_RBUTTON, lparam)
+            time.sleep(duration)
+            win32api.PostMessage(hwnd, win32con.WM_RBUTTONUP, 0, lparam)
+        elif btn_num == 3:
+            win32api.PostMessage(hwnd, win32con.WM_MBUTTONDOWN, win32con.MK_MBUTTON, lparam)
+            time.sleep(duration)
+            win32api.PostMessage(hwnd, win32con.WM_MBUTTONUP, 0, lparam)
+        elif btn_num in (4, 5):
+            # XBUTTON1/XBUTTON2: encode button in high word of wParam
+            hi = 0x0001 if btn_num == 4 else 0x0002
+            wParam = (hi << 16)
+            WM_XDOWN = 0x020B
+            WM_XUP = 0x020C
+            win32api.PostMessage(hwnd, WM_XDOWN, wParam, lparam)
+            time.sleep(duration)
+            win32api.PostMessage(hwnd, WM_XUP, wParam, lparam)
+        else:
+            print(f"[Input] Error: Unsupported mouse button {btn_num}")
+
+        # Release Modifiers
+        for mod in reversed(modifiers): 
+            win32api.PostMessage(hwnd, win32con.WM_KEYUP, mod, 0xC0000000)
+
+        print(f"[Input] Sent mouse BUTTON{btn_num} (Hold: {duration}s)")
+        return
+
     # Get Virtual Key Code
     vk = get_vk(key)
     if not vk: 
