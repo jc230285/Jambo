@@ -673,6 +673,7 @@ class Overlay(tk.Tk):
     def _key_monitor_loop(self):
         # Dedicated thread to monitor the toggle key at higher frequency
         last_state = 0
+        print("[DEBUG] Key monitor thread started - watching VK 192 (grave key)")
         while True:
             try:
                 # Always use grave key (192 = 0xC0) - no auto-detection
@@ -680,8 +681,13 @@ class Overlay(tk.Tk):
                 
                 state = win32api.GetAsyncKeyState(vk) & 0x8000
                 
+                # Debug output when key state changes
+                if state != last_state:
+                    print(f"[DEBUG] Grave key state changed: {last_state} -> {state}")
+                
                 # rising edge -> toggle ability
                 if state and not last_state:
+                    print("[DEBUG] Grave key pressed - toggling ability")
                     self.auto_ability = not self.auto_ability
                     # schedule UI update on main thread
                     try:
@@ -696,8 +702,8 @@ class Overlay(tk.Tk):
                         pass
                 self.pause_targeting = bool(state)
                 last_state = state
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"[DEBUG] Key monitor exception: {e}")
             time.sleep(0.01)
 
     # Low-level keyboard hook for reliable detection of short presses
