@@ -266,115 +266,93 @@ class FishingBotThread(threading.Thread):
         img = self.capture_zone()
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         
-        # NEW APPROACH: Use morphological operations to isolate small objects
-        # instead of trying to perfectly filter water with color alone
+        # NEW STRATEGY: Look for the distinctive red-blue transition at bobber top
+        # This is more reliable than trying to filter out all water
         
-        # 1. Red/Orange fin - keep existing detection
+        # 1. Detect RED fin (top of bobber)
         red_lower = np.array([0, 80, 100])
         red_upper = np.array([15, 255, 255])
         red_mask = cv2.inRange(hsv, red_lower, red_upper)
         
-        # 2. Blue/Teal - INCREASE saturation significantly to reduce water
-        blue_lower = np.array([95, 100, 100])  # Sat 100+ (was 60)
+        # 2. Detect BLUE body (below red fin)
+        blue_lower = np.array([95, 80, 80])  # Lower saturation to catch more
         blue_upper = np.array([110, 255, 255])
         blue_mask = cv2.inRange(hsv, blue_lower, blue_upper)
         
-        # Combine masks
-        combined_mask = cv2.bitwise_or(red_mask, blue_mask)
-        
-        # CRITICAL: Use morphological opening to remove large connected areas (water)
-        # Balance: enough erosion to break up water, but preserve bobber
-        kernel = np.ones((4,4), np.uint8)  # Moderate kernel size
-        combined_mask = cv2.erode(combined_mask, kernel, iterations=3)  # Moderate erosion
-        combined_mask = cv2.dilate(combined_mask, kernel, iterations=2)  # Restore small objects
-        
-        # Find contours after morphological cleanup
-        contours, _ = cv2.findContours(combined_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        # Find red contours (potential bobber tops)
+        red_contours, _ = cv2.findContours(red_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
         best_bobber = None
         best_score = 0
         
-        print(f"Total contours found: {len(contours)}")
+        print(f"Total red contours found: {len(red_contours)}")
         
-        zone_height = img.shape[0]
-        zone_width = img.shape[1]
-        
-        for cnt in contours:
-            area = cv2.contourArea(cnt)
-            if area < 20:  # Too small (increased from 15)
-                print(f"  Rejected: area {area:.1f} < 20")
-                continue
-            if area > 500:  # Too large - probably detecting water/background
-                print(f"  Rejected: area {area:.1f} > 500")
+        for red_cnt in red_contours:
+            red_area = cv2.contourArea(red_cnt)
+            if red_area < 5 or red_area > 300:  # Red fin should be small
                 continue
             
-            x, y, w, h = cv2.boundingRect(cnt)
+            rx, ry, rw, rh = cv2.boundingRect(red_cnt)
             
-            # Reject if touching top/bottom edges (likely clipped bobber)
-            if y < 5 or y + h > zone_height - 5:
-                print(f"  Rejected: touching edge at y={y}, h={h}, zone_height={zone_height}")
+            # Look for blue region BELOW this red region (within 30 pixels down)
+            search_y = ry + rh  # Start below red
+            search_h = 30  # Search up to 30 pixels down
+            search_x = max(0, rx - 10)  # Expand search horizontally
+            search_w = rw + 20
+            
+            # Check if search region is valid
+            if search_y + search_h > img.shape[0]:
+                search_h = img.shape[0] - search_y
+            if search_h < 5:
+                continue
+                
+            # Count blue pixels in region below red
+            blue_region = blue_mask[search_y:search_y+search_h, search_x:min(search_x+search_w, img.shape[1])]
+            blue_pixels = np.sum(blue_region > 0)
+            
+            if blue_pixels < 10:  # Need significant blue below red
                 continue
             
-            # Reject if too wide or too tall
-            if w > 100 or h > 100:
-                print(f"  Rejected: size {w}x{h} exceeds 100")
-                continue
+            # This is a candidate! Score based on red area + blue pixels
+            score = red_area + blue_pixels * 2
             
-            # Relax vertical requirement - allow width up to 1.5x height (bobber can be tilted)
-            if w > h * 1.5:
-                print(f"  Rejected: width {w} > 1.5*height {h} (too horizontal)")
-                continue
+            # Combined bounding box (red + blue region)
+            combined_y = ry
+            combined_h = (search_y + search_h) - ry
+            combined_x = search_x
+            combined_w = search_w
             
-            # Calculate how many bobber components are present in this region
-            roi_red = red_mask[y:y+h, x:x+w]
-            roi_blue = blue_mask[y:y+h, x:x+w]
-            
-            red_pixels = np.sum(roi_red > 0)
-            blue_pixels = np.sum(roi_blue > 0)
-            
-            # Count components - need at least red OR blue
-            component_count = (red_pixels > 3) + (blue_pixels > 3)
-            
-            print(f"  Candidate: pos ({x},{y}) size {w}x{h}, area {area:.1f}, red={red_pixels} blue={blue_pixels}, components={component_count}")
-            
-            if component_count < 1:
-                print(f"    Rejected: no components found")
-                continue
-            
-            # Prefer tall, narrow shapes (bobber is vertical)
-            aspect_ratio = h / float(max(w, 1))
-            
-            # Score based on: area + components + aspect ratio
-            score = component_count * 100 + aspect_ratio * 10 + area * 0.5
+            print(f"  Candidate: red at ({rx},{ry}) {rw}x{rh}, blue_pixels={blue_pixels}, score={score:.1f}")
             
             if score > best_score:
                 best_score = score
-                best_bobber = (cnt, x, y, w, h, component_count)
+                # Return the point where red meets blue (cork meets feather)
+                click_x = rx + rw // 2
+                click_y = ry + rh  # Bottom of red = top of blue = transition point
+                best_bobber = (click_x, click_y, red_area, blue_pixels)
         
         if best_bobber:
-            cnt, x, y, w, h, components = best_bobber
+            click_x, click_y, red_area, blue_pixels = best_bobber
             
             # Debug output
-            print(f"Bobber detected at zone coords ({x},{y}) size {w}x{h}, components: {components}/2, score: {best_score:.1f}")
+            print(f"Bobber detected at transition point ({click_x},{click_y}), red_area={red_area}, blue_pixels={blue_pixels}, score: {best_score:.1f}")
             
-            # Draw outline around detected bobber
-            cv2.drawContours(img, [cnt], -1, (0, 255, 0), 2)
-            
-            # Draw colored boxes for each component detected
-            cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 255), 1)
-            cv2.putText(img, f"Bobber ({components}/2)", (x, y-5), 
+            # Draw crosshair at click point
+            cv2.drawMarker(img, (click_x, click_y), (0, 255, 0), cv2.MARKER_CROSS, 20, 2)
+            cv2.circle(img, (click_x, click_y), 5, (0, 255, 255), 2)
+            cv2.putText(img, f"Cork-Feather ({best_score:.0f})", (click_x+10, click_y-10), 
                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0), 1)
             
             self.update_preview(img)
             
-            # Calculate screen coordinates
-            screen_x = self.config['zone']['left'] + x + w//2
-            screen_y = self.config['zone']['top'] + y + h//2
-            confidence = min(1.0, best_score / 300.0)
+            # Calculate screen coordinates for the transition point
+            screen_x = self.config['zone']['left'] + click_x
+            screen_y = self.config['zone']['top'] + click_y
+            confidence = min(1.0, best_score / 200.0)
             
             return (screen_x, screen_y, float(confidence))
         
-        print(f"No bobber detected. Found {len(contours)} contours total.")
+        print(f"No bobber detected. Found {len(red_contours)} red regions total.")
         self.update_preview(img)
         return None
 
