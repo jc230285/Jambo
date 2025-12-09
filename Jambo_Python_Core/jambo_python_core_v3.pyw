@@ -515,7 +515,7 @@ class Overlay(tk.Tk):
         except Exception:
             x, y = default_x, default_y
         self.geometry(f"{win_w}x{win_h}+{x}+{y}")
-        self.current_pos = cfg.load_pos(); self.slot_map = {}; self.action_map = {}; self.auto_ability = False; self.auto_target = False
+        self.current_pos = self.config_data.get('pos', [4, 0]); self.slot_map = {}; self.action_map = {}; self.auto_ability = False; self.auto_target = False
         self.opt_window = None; self.insp_window = None
         self.press_history = []; self.shown_warnings = set()
         self._last_log_ability = ""; self._last_log_target = ""
@@ -638,7 +638,15 @@ class Overlay(tk.Tk):
         def up(e):
             if s[0]:
                 l, t = min(s[0][0], e.x), min(s[0][1], e.y); sz = max(abs(e.x-s[0][0]), abs(e.y-s[0][1]))
-                if sz > 10: self.config_data["square_size"] = sz; self.current_pos = cfg.save_pos((l, t)); cfg.save(self.config_data)
+                if sz > 10:
+                    self.config_data["square_size"] = sz
+                    # Convert screen coords to grid position
+                    cell_sz = self.config_data.get('cell_size', 10)
+                    row = int(t / cell_sz)
+                    col = int(l / cell_sz)
+                    self.current_pos = [row, col]
+                    self.config_data['pos'] = [row, col]
+                    cfg.save(self.config_data)
             sel.destroy()
         cv.bind("<ButtonPress-1>", down); cv.bind("<B1-Motion>", drag); cv.bind("<ButtonRelease-1>", up); sel.bind("<Escape>", lambda e: sel.destroy())
 
@@ -715,6 +723,8 @@ class Overlay(tk.Tk):
     def _key_monitor_loop(self):
         # Dedicated thread to monitor the toggle key at higher frequency
         last_state = 0
+        last_toggle_time = 0
+        DEBOUNCE_MS = 200  # 200ms debounce to prevent double-toggle
         print("[DEBUG] Key monitor thread started - watching toggle key from config")
         while True:
             try:
@@ -727,21 +737,26 @@ class Overlay(tk.Tk):
                 if state != last_state:
                     print(f"[DEBUG] Toggle key VK {vk} state changed: {last_state} -> {state}")
                 
-                # rising edge -> toggle ability
+                # rising edge -> toggle ability (with debounce)
                 if state and not last_state:
-                    print(f"[DEBUG] Toggle key VK {vk} pressed - toggling ability")
-                    self.auto_ability = not self.auto_ability
-                    # schedule UI update on main thread
-                    try:
-                        self.after(0, lambda: self.btn_ability.config(bg="#005500" if self.auto_ability else "#550000", text="Ability: ON" if self.auto_ability else "Ability"))
-                    except Exception:
-                        pass
-                    # Ensure auto_target is disabled when toggling abilities
-                    self.auto_target = False
-                    try:
-                        self.after(0, lambda: self.btn_target.config(bg="#550000", text="Target"))
-                    except Exception:
-                        pass
+                    current_time = time.time() * 1000  # milliseconds
+                    if current_time - last_toggle_time > DEBOUNCE_MS:
+                        print(f"[DEBUG] Toggle key VK {vk} pressed - toggling ability")
+                        last_toggle_time = current_time
+                        self.auto_ability = not self.auto_ability
+                        # schedule UI update on main thread
+                        try:
+                            self.after(0, lambda: self.btn_ability.config(bg="#005500" if self.auto_ability else "#550000", text="Ability: ON" if self.auto_ability else "Ability"))
+                        except Exception:
+                            pass
+                        # Ensure auto_target is disabled when toggling abilities
+                        self.auto_target = False
+                        try:
+                            self.after(0, lambda: self.btn_target.config(bg="#550000", text="Target"))
+                        except Exception:
+                            pass
+                    else:
+                        print(f"[DEBUG] Toggle key VK {vk} debounced (too soon: {current_time - last_toggle_time}ms)")
                 self.pause_targeting = bool(state)
                 last_state = state
             except Exception as e:
