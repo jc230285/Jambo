@@ -202,17 +202,33 @@ function E:CheckSpellCond(c, step)
             return false, "NoUnit" 
         end
         
-        local rangeStatus = "NoLim"
-        if data.slot and data.slot > 0 and UnitExists(unit) then
-            local r = IsActionInRange(data.slot, unit)
-            if r == 1 then rangeStatus = "InRange"
-            elseif r == 0 then rangeStatus = "OutOfRange"
-            else rangeStatus = "NoRange" end
+        local method = c.rangeMethod or "10y"
+        local inRange = false
+        
+        -- Use IsSpellInRange or CheckInteractDistance based on method
+        if method == "10y" then
+            inRange = CheckInteractDistance(unit, 3)  -- Duel range
+        elseif method == "20y" then
+            inRange = IsSpellInRange("Fire Blast", unit) == 1
+        elseif method == "28y" then
+            inRange = CheckInteractDistance(unit, 4)  -- Follow range
+        elseif method == "30y" then
+            inRange = IsSpellInRange("Frostbolt", unit) == 1
+        elseif method == "35y" then
+            inRange = IsSpellInRange("Fireball", unit) == 1
+        else
+            -- Fallback to old method
+            if data.slot and data.slot > 0 and UnitExists(unit) then
+                local r = IsActionInRange(data.slot, unit)
+                if r == 1 then inRange = true
+                elseif r == 0 then inRange = false
+                else inRange = nil end
+            end
         end
         
-        -- If spell is out of range, fail
-        if rangeStatus == "OutOfRange" then 
-            return false, "OutOfRange(max:" .. (data.range or "?") .. ")" 
+        -- If out of range, fail the condition
+        if inRange == false then 
+            return false, "OutOfRange(" .. method .. ")" 
         end
     end
 
