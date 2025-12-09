@@ -295,10 +295,18 @@ class FishingBotThread(threading.Thread):
         
         for cnt in contours:
             area = cv2.contourArea(cnt)
-            if area < 15:  # Reduced minimum size
+            if area < 15:  # Too small
+                continue
+            if area > 500:  # Too large - probably detecting water/background
                 continue
             
             x, y, w, h = cv2.boundingRect(cnt)
+            
+            # Reject if too wide or too flat (bobber should be tallish)
+            if w > 100 or h > 100:
+                continue
+            if w > h:  # Width should not exceed height for a bobber
+                continue
             
             # Calculate how many bobber components are present in this region
             roi_red = red_mask[y:y+h, x:x+w]
@@ -329,6 +337,9 @@ class FishingBotThread(threading.Thread):
         if best_bobber:
             cnt, x, y, w, h, components = best_bobber
             
+            # Debug output
+            print(f"Bobber detected at zone coords ({x},{y}) size {w}x{h}, components: {components}/3, score: {best_score:.1f}")
+            
             # Draw outline around detected bobber
             cv2.drawContours(img, [cnt], -1, (0, 255, 0), 2)
             
@@ -346,6 +357,7 @@ class FishingBotThread(threading.Thread):
             
             return (screen_x, screen_y, float(confidence))
         
+        print(f"No bobber detected. Found {len(contours)} contours total.")
         self.update_preview(img)
         return None
 
