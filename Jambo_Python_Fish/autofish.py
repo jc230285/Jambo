@@ -124,9 +124,14 @@ class FishingBotThread(threading.Thread):
         
         while self.running:
             try:
-                self.update_log("Casting...")
-                WindowMgr.send_key(self.hwnd, self.config['cast_key'])
-                time.sleep(2.5) 
+                # Only cast if casting is not disabled
+                if not self.config.get('disable_casting', False):
+                    self.update_log("Casting...")
+                    WindowMgr.send_key(self.hwnd, self.config['cast_key'])
+                    time.sleep(2.5)
+                else:
+                    self.update_log("Detect mode - looking for existing bobber...")
+                    time.sleep(0.5) 
 
                 find_result = self.find_bobber()
                 bobber_loc = None
@@ -466,6 +471,7 @@ class FishingApp:
         self.sensitivity = tk.DoubleVar(value=2.0)
         self.current_splash_val = tk.DoubleVar(value=0.0) # For progress bar
         self.reel_timeout = tk.IntVar(value=30)  # Reel timeout in seconds (default 30s)
+        self.disable_casting = tk.BooleanVar(value=False)  # Skip casting, only detect existing bobbers
         self.template_path = "bobber_template.png"
         # Overlay window variable - lazy init
         self.overlay_win = None
@@ -492,6 +498,9 @@ class FishingApp:
         
         ttk.Label(settings_frame, text="Reel Timeout (sec):").grid(row=3, column=0)
         ttk.Entry(settings_frame, textvariable=self.reel_timeout, width=5).grid(row=3, column=1, sticky="w")
+        
+        # Checkbox to disable casting
+        ttk.Checkbutton(settings_frame, text="Detect Only (No Casting)", variable=self.disable_casting).grid(row=4, column=0, columnspan=2, sticky="w", padx=5, pady=5)
         
         # --- Sensitivity & Splash Meter ---
         sens_frame = ttk.LabelFrame(root, text="Splash Detection (Threshold vs Current)")
@@ -567,6 +576,7 @@ class FishingApp:
                     self.interact_key.set(data.get('interact_key', "9"))
                     self.sensitivity.set(data.get('sensitivity', 2.0))
                     self.reel_timeout.set(data.get('reel_timeout', 30))
+                    self.disable_casting.set(data.get('disable_casting', False))
                     self.template_path = data.get('template_path', "bobber_template.png")
                     print("Config loaded.")
             except Exception as e:
@@ -579,7 +589,8 @@ class FishingApp:
             'cast_key': self.cast_key.get(),
             'interact_key': self.interact_key.get(),
             'sensitivity': self.sensitivity.get(),
-            'reel_timeout': int(self.reel_timeout.get()),
+            'reel_timeout': self.reel_timeout.get(),
+            'disable_casting': self.disable_casting.get(),
             'template_path': self.template_path
         }
         try:
@@ -625,6 +636,7 @@ class FishingApp:
                 'interact_key': self.interact_key.get(),
                 'sensitivity': self.sensitivity.get(),
                 'reel_timeout': int(self.reel_timeout.get()),
+                'disable_casting': self.disable_casting.get(),
                 'template_path': self.template_path
             }
             # Pass the splash UI updater function to the thread
