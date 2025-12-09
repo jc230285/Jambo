@@ -128,7 +128,8 @@ class FishingBotThread(threading.Thread):
                 if not self.config.get('disable_casting', False):
                     self.update_log("Casting...")
                     WindowMgr.send_key(self.hwnd, self.config['cast_key'])
-                    time.sleep(2.5)
+                    self.update_log("Waiting for cast animation...")
+                    time.sleep(2.0)  # Wait for cast animation and bobber to land
                 else:
                     self.update_log("Detect mode - looking for existing bobber...")
                     time.sleep(0.5) 
