@@ -261,26 +261,21 @@ class FishingBotThread(threading.Thread):
         img = self.capture_zone()
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         
-        # Detect bobber components with relaxed ranges:
-        # 1. Red/Orange fin (top) - wider range
-        red_lower1 = np.array([0, 50, 50])
-        red_upper1 = np.array([15, 255, 255])
-        red_mask1 = cv2.inRange(hsv, red_lower1, red_upper1)
+        # Much stricter color detection focused on actual bobber colors
+        # 1. Red/Orange fin (top) - vibrant red/orange only
+        red_lower = np.array([0, 100, 100])  # Higher saturation and value
+        red_upper = np.array([15, 255, 255])
+        red_mask = cv2.inRange(hsv, red_lower, red_upper)
         
-        # Also check orange-yellow range
-        red_lower2 = np.array([15, 50, 50])
-        red_upper2 = np.array([25, 255, 255])
-        red_mask2 = cv2.inRange(hsv, red_lower2, red_upper2)
-        red_mask = cv2.bitwise_or(red_mask1, red_mask2)
-        
-        # 2. Blue body (middle) - more permissive
-        blue_lower = np.array([95, 40, 40])
-        blue_upper = np.array([135, 255, 255])
+        # 2. Blue body - NOT the water blue (water is desaturated)
+        # Bobber blue is more saturated/vibrant
+        blue_lower = np.array([100, 80, 80])  # Much higher saturation
+        blue_upper = np.array([130, 255, 255])
         blue_mask = cv2.inRange(hsv, blue_lower, blue_upper)
         
-        # 3. Cork/beige/white (bottom) - wider range including bright colors
-        cork_lower = np.array([0, 0, 100])
-        cork_upper = np.array([180, 100, 255])
+        # 3. Cork/float - bright, low saturation (white/beige)
+        cork_lower = np.array([0, 0, 150])  # Bright colors only
+        cork_upper = np.array([180, 80, 255])  # Low saturation
         cork_mask = cv2.inRange(hsv, cork_lower, cork_upper)
         
         # Combine all masks
@@ -427,7 +422,7 @@ class FishingBotThread(threading.Thread):
     def _is_bobber_still_at(self, x, y, check_radius=30):
         """Check a small region around absolute screen coords (x,y) for bobber-like color/texture.
         Returns True ONLY if bobber is confidently detected in that region.
-        Uses multi-color detection (red fin, blue body, cork) with relaxed thresholds.
+        Uses strict multi-color detection to avoid false positives.
         """
         try:
             left = int(x - check_radius // 2)
@@ -439,30 +434,25 @@ class FishingBotThread(threading.Thread):
             bgr = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
             hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
             
-            # Check for red/orange fin - wider range
-            red_lower1 = np.array([0, 50, 50])
-            red_upper1 = np.array([15, 255, 255])
-            red_mask1 = cv2.inRange(hsv, red_lower1, red_upper1)
-            
-            red_lower2 = np.array([15, 50, 50])
-            red_upper2 = np.array([25, 255, 255])
-            red_mask2 = cv2.inRange(hsv, red_lower2, red_upper2)
-            red_mask = cv2.bitwise_or(red_mask1, red_mask2)
+            # Strict color matching - vibrant colors only
+            red_lower = np.array([0, 100, 100])
+            red_upper = np.array([15, 255, 255])
+            red_mask = cv2.inRange(hsv, red_lower, red_upper)
             red_pixels = np.sum(red_mask > 0)
             
-            # Check for blue body
-            blue_lower = np.array([95, 40, 40])
-            blue_upper = np.array([135, 255, 255])
+            # Blue body - saturated blue, not water
+            blue_lower = np.array([100, 80, 80])
+            blue_upper = np.array([130, 255, 255])
             blue_mask = cv2.inRange(hsv, blue_lower, blue_upper)
             blue_pixels = np.sum(blue_mask > 0)
             
-            # Check for cork/beige/white
-            cork_lower = np.array([0, 0, 100])
-            cork_upper = np.array([180, 100, 255])
+            # Cork - bright, low saturation
+            cork_lower = np.array([0, 0, 150])
+            cork_upper = np.array([180, 80, 255])
             cork_mask = cv2.inRange(hsv, cork_lower, cork_upper)
             cork_pixels = np.sum(cork_mask > 0)
             
-            # Require at least 1 component with sufficient pixels (relaxed from 2)
+            # Require at least 1 component with sufficient pixels
             components_found = (red_pixels > 5) + (blue_pixels > 5) + (cork_pixels > 5)
             
             if components_found >= 1:
