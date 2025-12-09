@@ -543,7 +543,7 @@ function E:CheckItem(c)
     -- Get item data from Book
     local itemData = NS.Book[c.itemName]
     if not itemData or itemData.type ~= "ITEM" then 
-        return false, "ItemNotFound" 
+        return false, "Count:0 CD:0.0s" 
     end
     
     local itemID = itemData.id
