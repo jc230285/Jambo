@@ -973,13 +973,10 @@ function UI:EditCondition(idx)
             if cd < 0 then cd = 0 end
             local chg = d.id and (select(1, GetSpellCharges(d.id)) or 0) or "-"
             
-            -- Get spell range if available
+            -- Get spell range if available (from spell book data, not GetSpellRange which doesn't exist in Classic)
             local rangeInfo = ""
-            if d.id then
-                local minRange, maxRange = GetSpellRange(d.id)
-                if maxRange then
-                    rangeInfo = string.format("  Range:%d", maxRange)
-                end
+            if d.range and d.range > 0 then
+                rangeInfo = string.format("  Range:%d", d.range)
             end
             
             infoTxt = string.format("%s  CD:%.1f  Chg:%s%s", spellName, cd, chg, rangeInfo)
