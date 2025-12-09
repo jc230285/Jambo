@@ -750,7 +750,7 @@ class Overlay(tk.Tk):
         row1 = tk.Frame(c, bg="#111"); row1.pack(side="bottom", fill="x", pady=(2,0))
         opts = {"side": "left", "fill": "x", "expand": True, "padx": 1}
         tk.Button(row1, text="Exit", bg="#442222", fg="white", command=self._quit_app).pack(**opts)
-        tk.Button(row1, text="Restart", bg="#333", fg="white", command=self._restart_app).pack(**opts)
+        tk.Button(row1, text="Update", bg="#333", fg="white", command=self._force_update).pack(**opts)
         tk.Button(row1, text="Options", bg="#333", fg="white", command=self._toggle_options).pack(**opts)
         tk.Button(row1, text="Inspector", bg="#333", fg="#00aaff", command=self._toggle_inspector).pack(**opts)
         
@@ -772,21 +772,30 @@ class Overlay(tk.Tk):
             pass
         self.destroy(); sys.exit()
     
-    def _restart_app(self):
-        """Restart the Python application."""
+    def _force_update(self):
+        """Force update addons from git."""
         try:
-            self._uninstall_keyboard_hook()
-        except Exception:
-            pass
-        try:
-            # Restart using the same Python executable and script
-            python = sys.executable
-            script = os.path.abspath(sys.argv[0])
-            self.destroy()
-            os.execl(python, python, script, *sys.argv[1:])
+            addon_dir = get_addon_install_dir(self.config_data.get("root_dir", ""))
+            self._log_raw("[UPDATE] Force updating from git...", "Warn")
+            
+            # Try git pull first
+            if os.path.isdir(os.path.join(addon_dir, '.git')):
+                try:
+                    subprocess.run(["git", "fetch"], cwd=addon_dir, creationflags=CREATE_NO_WINDOW, check=True)
+                    subprocess.run(["git", "reset", "--hard", "origin/beta"], cwd=addon_dir, creationflags=CREATE_NO_WINDOW, check=True)
+                    subprocess.run(["git", "pull"], cwd=addon_dir, creationflags=CREATE_NO_WINDOW, check=True)
+                    self._log_raw("[UPDATE] Git update successful!", "Warn")
+                    return
+                except Exception as e:
+                    self._log_raw(f"[UPDATE] Git failed: {e}, trying download...", "Warn")
+            
+            # Fallback to download
+            if ensure_repo(addon_dir, force_install=True, log_fn=self._log_raw):
+                self._log_raw("[UPDATE] Download update successful!", "Warn")
+            else:
+                self._log_raw("[UPDATE] Update failed!", "Warn")
         except Exception as e:
-            messagebox.showerror("Restart Failed", f"Failed to restart: {e}")
-            sys.exit()
+            self._log_raw(f"[UPDATE] Error: {e}", "Warn")
     
     def _toggle_options(self):
         if not self.opt_window or not tk.Toplevel.winfo_exists(self.opt_window): self.opt_window = OptionsWindow(self)
