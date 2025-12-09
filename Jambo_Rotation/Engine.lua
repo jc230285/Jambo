@@ -27,9 +27,9 @@ function E:CheckSpell(step)
         if remaining > 0.1 then return false, string.format("CD %.1fs", remaining) end
     end
 
-    if UnitExists("target") and NS.Range then
-        local rangeStatus = NS.Range:GetRangeNumeric(step.name, "target")
-        if rangeStatus == 0 then return false, "Range" end
+    if data.slot and data.slot > 0 and UnitExists("target") then
+        local inRange = IsActionInRange(data.slot, "target")
+        if inRange == 0 then return false, "Range" end
     end
     return true, "Ready"
 end
@@ -203,8 +203,11 @@ function E:CheckSpellCond(c, step)
         end
         
         local rangeStatus = "NoLim"
-        if NS.Range then
-            rangeStatus = NS.Range:GetRangeStatus(data.name or step.name, unit)
+        if data.slot and data.slot > 0 and UnitExists(unit) then
+            local r = IsActionInRange(data.slot, unit)
+            if r == 1 then rangeStatus = "InRange"
+            elseif r == 0 then rangeStatus = "OutOfRange"
+            else rangeStatus = "NoRange" end
         end
         
         -- If spell is out of range, fail
@@ -220,8 +223,11 @@ function E:CheckSpellCond(c, step)
     -- Add range check status if enabled
     if c.chkRange then
         local unit = c.rangeUnit or "target"
-        if UnitExists(unit) and NS.Range then
-            local rangeStatus = NS.Range:GetRangeStatus(data.name or step.name, unit)
+        if data.slot and data.slot > 0 and UnitExists(unit) then
+            local r = IsActionInRange(data.slot, unit)
+            if r == 1 then rangeStatus = "InRange"
+            elseif r == 0 then rangeStatus = "OutOfRange"
+            else rangeStatus = "NoRange" end
             table.insert(parts, "RngChk:" .. rangeStatus)
         end
     end

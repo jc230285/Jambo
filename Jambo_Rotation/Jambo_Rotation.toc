@@ -7,7 +7,6 @@
 ## Dependencies: Jambo_Spells
 
 Utils.lua
-Range.lua
 Data.lua
 Engine.lua
 Core.lua
