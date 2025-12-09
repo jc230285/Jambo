@@ -50,16 +50,18 @@ info:EnableMouse(true)
 info:SetScript("OnEscapePressed", function() info:ClearFocus() end)
 
 -- Test spell data - one spell per range breakpoint per class
+-- Excludes: Point-blank AoE spells (Frost Nova, Arcane Explosion, etc.)
 local TEST_SPELLS = {
     -- Mage
-    {name = "Frost Nova", range = 10, class = "MAGE"},
     {name = "Fire Blast", range = 20, class = "MAGE"},
     {name = "Frostbolt", range = 30, class = "MAGE"},
     {name = "Fireball", range = 35, class = "MAGE"},
+    {name = "Scorch", range = 30, class = "MAGE"},
     
     -- Warlock
     {name = "Corruption", range = 30, class = "WARLOCK"},
     {name = "Shadow Bolt", range = 30, class = "WARLOCK"},
+    {name = "Immolate", range = 30, class = "WARLOCK"},
     
     -- Priest
     {name = "Shadow Word: Pain", range = 30, class = "PRIEST"},
@@ -69,18 +71,25 @@ local TEST_SPELLS = {
     -- Druid
     {name = "Wrath", range = 30, class = "DRUID"},
     {name = "Moonfire", range = 30, class = "DRUID"},
+    {name = "Starfire", range = 30, class = "DRUID"},
     
     -- Shaman
     {name = "Lightning Bolt", range = 30, class = "SHAMAN"},
     {name = "Earth Shock", range = 20, class = "SHAMAN"},
+    {name = "Flame Shock", range = 20, class = "SHAMAN"},
     
     -- Hunter
     {name = "Arcane Shot", range = 35, class = "HUNTER"},
     {name = "Serpent Sting", range = 35, class = "HUNTER"},
+    {name = "Steady Shot", range = 35, class = "HUNTER"},
     
-    -- Paladin/Warrior/Rogue (melee)
+    -- Paladin
     {name = "Judgement", range = 10, class = "PALADIN"},
+    {name = "Exorcism", range = 30, class = "PALADIN"},
+    
+    -- Warrior
     {name = "Charge", range = 25, class = "WARRIOR"},
+    {name = "Throw", range = 30, class = "WARRIOR"},
 }
 local TEST_SPELL_NAME = "Fire Blast"
 local TEST_SPELL_ID = 2136
@@ -416,6 +425,10 @@ local function UpdateDebugInfo()
     table.insert(lines, "|cff00ff00=== SUMMARY ===|r")
     table.insert(lines, "✅ IsSpellInRange WORKS in Classic Anniversary!")
     table.insert(lines, "✅ CheckInteractDistance always works")
+    table.insert(lines, "")
+    table.insert(lines, "|cffffff00Note: Point-blank AoE spells excluded|r")
+    table.insert(lines, "|cffffff00(Frost Nova, Arcane Explosion, etc.)|r")
+    table.insert(lines, "|cffffff00These don't target enemies, so return nil|r")
     table.insert(lines, "")
     table.insert(lines, "Recommended Code:")
     table.insert(lines, "|cffaaaaaa-- For 20-yard spells (Fire Blast)|r")
