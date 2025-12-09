@@ -703,8 +703,10 @@ class Overlay(tk.Tk):
                     state = win32api.GetAsyncKeyState(vk) & 0x8000
                 else:
                     state = 0
-                # If configured vk not reporting pressed, scan the candidate list
-                if not state:
+                
+                # Only scan candidate list if NO vk is configured (first-time setup)
+                # Do NOT scan if user has already set a toggle key
+                if not vk and not state:
                     candidate_found = None
                     candidate_state = 0
                     for cv in CANDIDATE_VKS:
@@ -722,29 +724,16 @@ class Overlay(tk.Tk):
                             candidate_found = cv
                             candidate_state = st
                             # If stable beyond threshold and saved VK is unset, commit to config
-                            try:
-                                saved_vk = int(self.config_data.get('toggle_vk', 0) or 0)
-                            except Exception:
-                                saved_vk = 0
-                            if detection_counters[cv] >= DETECTION_THRESHOLD and saved_vk == 0 and cv != vk:
+                            if detection_counters[cv] >= DETECTION_THRESHOLD:
                                 try:
                                     self.config_data['toggle_vk'] = cv
                                     cfg.save(self.config_data)
                                     vk = cv
-                                    # Mon VK label removed; no-op
                                 except Exception:
                                     pass
-                            # Update label immediately to show the candidate being pressed
-                            try:
-                                pass
-                            except Exception:
-                                pass
-                            # break out and use candidate for this poll
+                            # Use candidate for this poll
                             state = st
                             break
-                else:
-                    # fallback try both 0xC0 and ord('`')
-                    state = (win32api.GetAsyncKeyState(0xC0) & 0x8000) or (win32api.GetAsyncKeyState(ord('`')) & 0x8000)
                 # If the vk being monitored changed, update label once to the configured vk (RELEASED)
                 if vk != prev_vk:
                     prev_vk = vk
