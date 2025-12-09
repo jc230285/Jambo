@@ -487,52 +487,36 @@ class FishingApp:
         settings_frame = ttk.LabelFrame(root, text="Configuration")
         settings_frame.pack(fill="x", padx=10, pady=5)
         
-        ttk.Label(settings_frame, text="Window Title:").grid(row=0, column=0, padx=5, pady=5)
-        ttk.Entry(settings_frame, textvariable=self.window_title).grid(row=0, column=1)
-        
-        ttk.Label(settings_frame, text="Cast Key:").grid(row=1, column=0)
-        ttk.Entry(settings_frame, textvariable=self.cast_key, width=5).grid(row=1, column=1, sticky="w")
+        ttk.Label(settings_frame, text="Cast Key:").grid(row=0, column=0, padx=5, pady=5)
+        ttk.Entry(settings_frame, textvariable=self.cast_key, width=5).grid(row=0, column=1, sticky="w")
 
-        ttk.Label(settings_frame, text="Interact Key:").grid(row=2, column=0)
-        ttk.Entry(settings_frame, textvariable=self.interact_key, width=5).grid(row=2, column=1, sticky="w")
+        ttk.Label(settings_frame, text="Interact Key:").grid(row=1, column=0)
+        ttk.Entry(settings_frame, textvariable=self.interact_key, width=5).grid(row=1, column=1, sticky="w")
         
-        ttk.Label(settings_frame, text="Reel Timeout (sec):").grid(row=3, column=0)
-        ttk.Entry(settings_frame, textvariable=self.reel_timeout, width=5).grid(row=3, column=1, sticky="w")
+        ttk.Label(settings_frame, text="Reel Timeout (sec):").grid(row=2, column=0)
+        ttk.Entry(settings_frame, textvariable=self.reel_timeout, width=5).grid(row=2, column=1, sticky="w")
         
         # Checkbox to disable casting
-        ttk.Checkbutton(settings_frame, text="Detect Only (No Casting)", variable=self.disable_casting).grid(row=4, column=0, columnspan=2, sticky="w", padx=5, pady=5)
+        ttk.Checkbutton(settings_frame, text="Detect Only (No Casting)", variable=self.disable_casting).grid(row=3, column=0, columnspan=2, sticky="w", padx=5, pady=5)
         
         # --- Sensitivity & Splash Meter ---
-        sens_frame = ttk.LabelFrame(root, text="Splash Detection (Threshold vs Current)")
+        sens_frame = ttk.LabelFrame(root, text="Splash Detection")
         sens_frame.pack(fill="x", padx=10, pady=5)
 
-        ttk.Label(sens_frame, text="Sensitivity Threshold:").pack(anchor="w", padx=5)
+        ttk.Label(sens_frame, text="Sensitivity:").pack(anchor="w", padx=5, pady=(5,0))
         scale = ttk.Scale(sens_frame, variable=self.sensitivity, from_=0.5, to=15.0)
-        scale.pack(fill="x", padx=5, pady=2)
+        scale.pack(fill="x", padx=5, pady=(0,2))
         
         # Helper label to show slider value
         self.lbl_sens_val = ttk.Label(sens_frame, text="2.0")
-        self.lbl_sens_val.pack(anchor="e", padx=5)
+        self.lbl_sens_val.pack(anchor="e", padx=5, pady=(0,5))
         # Link slider movement to label update
         scale.configure(command=lambda v: self.lbl_sens_val.configure(text=f"{float(v):.2f}"))
 
-        ttk.Separator(sens_frame, orient='horizontal').pack(fill='x', pady=5)
-
-        ttk.Label(sens_frame, text="Current Splash Level (Green Bar):").pack(anchor="w", padx=5)
         self.splash_bar = ttk.Progressbar(sens_frame, variable=self.current_splash_val, maximum=15.0)
-        self.splash_bar.pack(fill="x", padx=5, pady=5)
+        self.splash_bar.pack(fill="x", padx=5, pady=(0,2))
         self.lbl_splash_val = ttk.Label(sens_frame, text="Noise: 0.0")
-        self.lbl_splash_val.pack(anchor="e", padx=5)
-        self.lbl_timeout_val = ttk.Label(sens_frame, text="Timeout: 0s")
-        self.lbl_timeout_val.pack(anchor="e", padx=5)
-        self.timeout_progress = ttk.Progressbar(sens_frame, orient='horizontal', mode='determinate')
-        self.timeout_progress.pack(fill='x', padx=5, pady=2)
-        # set maximum based on reel_timeout variable
-        try:
-            self.timeout_progress.configure(maximum=self.reel_timeout.get())
-            self.reel_timeout.trace('w', lambda *args: self.timeout_progress.configure(maximum=self.reel_timeout.get()))
-        except Exception:
-            pass
+        self.lbl_splash_val.pack(anchor="e", padx=5, pady=(0,5))
 
         # --- Zone & Calib ---
         zone_frame = ttk.LabelFrame(root, text="Detection Area")
@@ -557,12 +541,6 @@ class FishingApp:
         
         self.btn_start = ttk.Button(control_frame, text="START BOT", command=self.toggle_bot)
         self.btn_start.pack(fill="x", ipady=10)
-
-        self.log_text = tk.Text(root, height=8, width=50, state='disabled')
-        self.log_text.pack(padx=10, pady=5)
-        
-        self.preview_label = tk.Label(root, text="Preview")
-        self.preview_label.pack(pady=5)
 
     # --- SAVE / LOAD LOGIC ---
     def load_config(self):
@@ -602,10 +580,8 @@ class FishingApp:
 
     # --- Actions ---
     def log(self, msg):
-        self.log_text.config(state='normal')
-        self.log_text.insert(tk.END, msg + "\n")
-        self.log_text.see(tk.END)
-        self.log_text.config(state='disabled')
+        # Logging removed for minimal UI
+        pass
 
     def update_splash_ui(self, val):
         # Update progress bar and text label safely
@@ -615,12 +591,8 @@ class FishingApp:
         self.lbl_splash_val.config(text=f"Noise: {val:.2f}")
 
     def update_preview(self, cv_img):
-        cv_img = cv2.resize(cv_img, (300, 200))
-        cv_img = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
-        img = Image.fromarray(cv_img)
-        imgtk = ImageTk.PhotoImage(image=img)
-        self.preview_label.imgtk = imgtk
-        self.preview_label.configure(image=imgtk)
+        # Preview removed for minimal UI
+        pass
 
     def toggle_bot(self):
         if self.bot_thread and self.bot_thread.is_alive():
@@ -708,18 +680,8 @@ class FishingApp:
             pass
 
     def update_timeout_ui(self, remaining_sec):
-        # Called from worker thread; schedule on main loop
-        try:
-            def _set():
-                self.lbl_timeout_val.config(text=f"Timeout: {int(remaining_sec)}s")
-                try:
-                    self.timeout_progress.configure(maximum=self.reel_timeout.get())
-                    self.timeout_progress['value'] = int(remaining_sec)
-                except Exception:
-                    pass
-            self.root.after(0, _set)
-        except Exception:
-            pass
+        # Timeout UI removed for minimal UI
+        pass
 
     # --- Zone Selection ---
     def start_zone_selection(self):
