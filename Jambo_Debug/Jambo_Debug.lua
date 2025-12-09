@@ -71,17 +71,15 @@ local function UpdateDebugInfo()
         table.insert(lines, "Spell: " .. spellName .. " (" .. (spellRank or "no rank") .. ")")
         table.insert(lines, "ID: " .. TEST_SPELL_ID)
         
-        -- Try to find spell in spellbook
+        -- Try to find spell in spellbook using GetSpellBookItemName (Classic API)
         local i = 1
         local foundSlot = nil
-        local foundRange = nil
         while true do
-            local name, rank = GetSpellName(i, BOOKTYPE_SPELL)
+            local name, rank = GetSpellBookItemName(i, BOOKTYPE_SPELL)
             if not name then break end
             
             if name == TEST_SPELL_NAME then
                 foundSlot = i
-                -- Note: GetSpellInfo doesn't exist in Classic, we rely on tooltip parsing
                 break
             end
             i = i + 1

@@ -1994,9 +1994,17 @@ function UI:CreateIconFrame()
     end)
 
     i:RegisterForClicks("AnyUp")
-    i:SetScript("OnClick", function()
-        if not UI.frame then UI:Init() end
-        if UI.frame:IsShown() then UI.frame:Hide() else UI.frame:Show() end
+    i:SetScript("OnClick", function(_, button)
+        if button == "RightButton" then
+            -- Open Jambo Gear UI on right-click
+            if _G.JamboGear and _G.JamboGear.ToggleGUI then
+                _G.JamboGear:ToggleGUI()
+            end
+        else
+            -- Left-click: toggle rotation UI
+            if not UI.frame then UI:Init() end
+            if UI.frame:IsShown() then UI.frame:Hide() else UI.frame:Show() end
+        end
     end)
 
     i.lbl = i:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmallOutline")

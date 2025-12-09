@@ -8,6 +8,18 @@ if not JG then return end
 -- 1. MAIN FRAME & TABS
 -- ==========================================================
 
+function JG:ToggleGUI()
+    if not self.gui then
+        self:CreateMainFrame()
+    end
+    
+    if self.gui:IsShown() then
+        self.gui:Hide()
+    else
+        self.gui:Show()
+    end
+end
+
 function JG:CreateMainFrame()
     if self.gui then return end
 
