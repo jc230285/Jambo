@@ -45,6 +45,7 @@ castTracker:SetScript("OnEvent", function(_, event, unit, _, spellID)
         local spellName = GetSpellInfo(spellID)
         if spellName then
             NS.Engine.lastCastTime[spellName] = GetTime()
+            NS.Engine.lastCastTarget[spellName] = UnitGUID("target")
         end
     end
 end)

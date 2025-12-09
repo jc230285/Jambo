@@ -5,8 +5,9 @@ local E = NS.Engine
 
 local Utils = NS.Utils
 
--- Track last spell cast times to prevent double-casting
+-- Track last spell cast times and targets to prevent double-casting
 E.lastCastTime = E.lastCastTime or {}
+E.lastCastTarget = E.lastCastTarget or {}
 
 local function resolveSpell(step)
     if not step or not step.name then return nil end
@@ -204,11 +205,28 @@ function E:CheckSpellCond(c, step)
         local checkSpellName = (not c.lastSpellName or c.lastSpellName == "" or c.lastSpellName == "AUTO") and spellName or c.lastSpellName
         local waitTime = c.lastSpellWait or 1.0
         local lastCast = E.lastCastTime[checkSpellName]
+        local lastTarget = E.lastCastTarget[checkSpellName]
         
         if lastCast then
             local timeSince = GetTime() - lastCast
-            if timeSince < waitTime then
-                return false, string.format("LastCast:%.1fs", timeSince)
+            
+            -- If ignore different target is enabled, check if target changed
+            if c.lastSpellIgnoreDiffTarget then
+                local currentTarget = UnitGUID("target")
+                if currentTarget and lastTarget and currentTarget ~= lastTarget then
+                    -- Target changed, ignore the wait time
+                    -- Don't return false, allow the spell
+                else
+                    -- Same target (or no target), enforce wait time
+                    if timeSince < waitTime then
+                        return false, string.format("LastCast:%.1fs", timeSince)
+                    end
+                end
+            else
+                -- Not ignoring target changes, always enforce wait time
+                if timeSince < waitTime then
+                    return false, string.format("LastCast:%.1fs", timeSince)
+                end
             end
         end
     end

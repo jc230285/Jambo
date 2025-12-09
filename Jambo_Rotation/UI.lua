@@ -771,6 +771,10 @@ function UI:CreateEditor(parent)
     ce.grpSpell.lastSpellWait = newEditBox(ce.grpSpell, 50)
     ce.grpSpell.lastSpellWait:ClearAllPoints()
     ce.grpSpell.lastSpellWait:SetPoint("LEFT", waitLbl, "RIGHT", 5, 0)
+    
+    -- Ignore if different target checkbox
+    ce.grpSpell.lastSpellIgnoreDiffTarget = newCheck(ce.grpSpell, "Ignore if different target")
+    ce.grpSpell.lastSpellIgnoreDiffTarget:SetPoint("TOPLEFT", ce.grpSpell.lastSpellChk, "BOTTOMLEFT", 20, -8)
 
     -- Range check with unit selector and range operator
     ce.grpSpell.rangeChk = newCheck(ce.grpSpell, "Check Range")
@@ -1010,6 +1014,7 @@ function UI:EditCondition(idx)
         local lastSpellOn = ce.grpSpell.lastSpellChk:GetChecked()
         ce.grpSpell.lastSpellName:SetShown(lastSpellOn)
         ce.grpSpell.lastSpellWait:SetShown(lastSpellOn)
+        ce.grpSpell.lastSpellIgnoreDiffTarget:SetShown(lastSpellOn)
     end
 
     if c.type == "SPELL" then
@@ -1028,6 +1033,7 @@ function UI:EditCondition(idx)
         c.chkLastSpell = c.chkLastSpell or false
         c.lastSpellName = c.lastSpellName or "AUTO"
         c.lastSpellWait = c.lastSpellWait or 1.0
+        c.lastSpellIgnoreDiffTarget = c.lastSpellIgnoreDiffTarget or false
 
         -- Spell dropdown (unique spell names only)
         local items = { { text = "AUTO (action spell)", value = "AUTO", onSelect = function(val) c.spellCondName = val end } }
@@ -1096,6 +1102,11 @@ function UI:EditCondition(idx)
         ce.grpSpell.lastSpellWait:SetText(tostring(c.lastSpellWait or 1.0))
         ce.grpSpell.lastSpellWait:SetScript("OnTextChanged", function(self)
             c.lastSpellWait = tonumber(self:GetText()) or 1.0
+        end)
+        
+        ce.grpSpell.lastSpellIgnoreDiffTarget:SetChecked(c.lastSpellIgnoreDiffTarget)
+        ce.grpSpell.lastSpellIgnoreDiffTarget:SetScript("OnClick", function()
+            c.lastSpellIgnoreDiffTarget = ce.grpSpell.lastSpellIgnoreDiffTarget:GetChecked()
         end)
         
         refreshSpellToggles()
