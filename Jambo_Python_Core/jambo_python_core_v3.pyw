@@ -678,12 +678,6 @@ class Overlay(tk.Tk):
                 # Always use grave key (192 = 0xC0) - no auto-detection
                 vk = 192  # Grave/tilde key only
                 
-                # If a low-level hook is installed, don't use polling to toggle/pause
-                if self.hook_installed:
-                    # keep reading but skip toggling/pause logic here
-                    time.sleep(0.01)
-                    continue
-                    
                 state = win32api.GetAsyncKeyState(vk) & 0x8000
                 
                 # rising edge -> toggle ability
