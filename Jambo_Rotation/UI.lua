@@ -742,19 +742,27 @@ function UI:CreateEditor(parent)
     ce.grpSpell.manaChk = newCheck(ce.grpSpell, "Check Mana")
     ce.grpSpell.manaChk:SetPoint("TOPLEFT", ce.grpSpell.chgChk, "BOTTOMLEFT", 0, -12)
 
-    -- Range check with unit selector and range method
+    -- Range check with unit selector and range operator
     ce.grpSpell.rangeChk = newCheck(ce.grpSpell, "Check Range")
     ce.grpSpell.rangeChk:SetPoint("TOPLEFT", ce.grpSpell.manaChk, "BOTTOMLEFT", 0, -8)
     
-    -- Range method dropdown (what range to check)
-    ce.grpSpell.rangeMethod = newDropdown(ce.grpSpell, 100, "Range")
-    ce.grpSpell.rangeMethod:ClearAllPoints()
-    ce.grpSpell.rangeMethod:SetPoint("LEFT", ce.grpSpell.rangeChk, "RIGHT", 18, 0)
+    -- Range operator dropdown (<= or >)
+    ce.grpSpell.rangeOp = newDropdown(ce.grpSpell, 60, "Op")
+    ce.grpSpell.rangeOp:ClearAllPoints()
+    ce.grpSpell.rangeOp:SetPoint("LEFT", ce.grpSpell.rangeChk, "RIGHT", 18, 0)
+    
+    -- Range value input (numeric)
+    ce.grpSpell.rangeVal = CreateFrame("EditBox", nil, ce.grpSpell, "InputBoxTemplate")
+    ce.grpSpell.rangeVal:SetSize(50, 20)
+    ce.grpSpell.rangeVal:SetPoint("LEFT", ce.grpSpell.rangeOp, "RIGHT", 10, 0)
+    ce.grpSpell.rangeVal:SetAutoFocus(false)
+    ce.grpSpell.rangeVal:SetNumeric(true)
+    ce.grpSpell.rangeVal:SetMaxLetters(3)
     
     -- Range unit dropdown
     ce.grpSpell.rangeUnit = newDropdown(ce.grpSpell, 100, "Unit")
     ce.grpSpell.rangeUnit:ClearAllPoints()
-    ce.grpSpell.rangeUnit:SetPoint("LEFT", ce.grpSpell.rangeMethod, "RIGHT", 10, 0)
+    ce.grpSpell.rangeUnit:SetPoint("LEFT", ce.grpSpell.rangeVal, "RIGHT", 10, 0)
 
     -- Info/debug line - now shows more detailed info including actual spell range
     ce.grpSpell.info = ce.grpSpell:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -839,11 +847,19 @@ function UI:CreateEditor(parent)
     ce.grpUnitTarget.casting = newCheck(ce.grpUnitTarget, "Casting")
     ce.grpUnitTarget.casting:SetPoint("TOPLEFT", 120, -190)
     
-    -- Range check with range method dropdown
+    -- Range check with operator and value
     ce.grpUnitTarget.rangeChk = newCheck(ce.grpUnitTarget, "Range Check")
     ce.grpUnitTarget.rangeChk:SetPoint("TOPLEFT", 10, -220)
-    ce.grpUnitTarget.rangeMethod = newDropdown(ce.grpUnitTarget, 100, "Range")
-    ce.grpUnitTarget.rangeMethod:SetPoint("TOPLEFT", 120, -230)
+    
+    ce.grpUnitTarget.rangeOp = newDropdown(ce.grpUnitTarget, 60, "Op")
+    ce.grpUnitTarget.rangeOp:SetPoint("TOPLEFT", 120, -230)
+    
+    ce.grpUnitTarget.rangeVal = CreateFrame("EditBox", nil, ce.grpUnitTarget, "InputBoxTemplate")
+    ce.grpUnitTarget.rangeVal:SetSize(50, 20)
+    ce.grpUnitTarget.rangeVal:SetPoint("TOPLEFT", 190, -227)
+    ce.grpUnitTarget.rangeVal:SetAutoFocus(false)
+    ce.grpUnitTarget.rangeVal:SetNumeric(true)
+    ce.grpUnitTarget.rangeVal:SetMaxLetters(3)
     
     -- Class check
     ce.grpUnitTarget.classChk = newCheck(ce.grpUnitTarget, "Check Class")
@@ -978,16 +994,35 @@ function UI:EditCondition(idx)
         ce.grpSpell.manaChk:SetScript("OnClick", function() c.chkMana = ce.grpSpell.manaChk:GetChecked() end)
 
         ce.grpSpell.rangeChk:SetChecked(c.chkRange)
-        ce.grpSpell.rangeChk:SetScript("OnClick", function() c.chkRange = ce.grpSpell.rangeChk:GetChecked() end)
+        ce.grpSpell.rangeChk:SetScript("OnClick", function() 
+            c.chkRange = ce.grpSpell.rangeChk:GetChecked()
+            ce.grpSpell.rangeOp:SetShown(c.chkRange)
+            ce.grpSpell.rangeVal:SetShown(c.chkRange)
+            ce.grpSpell.rangeUnit:SetShown(c.chkRange)
+        end)
         
-        -- Range method dropdown
-        setDropdownOptions(ce.grpSpell.rangeMethod, c.rangeMethod or "10y", {
-            { text = "10y (Duel)", value = "10y", onSelect = function(val) c.rangeMethod = val end },
-            { text = "20y (Fire Blast)", value = "20y", onSelect = function(val) c.rangeMethod = val end },
-            { text = "28y (Follow)", value = "28y", onSelect = function(val) c.rangeMethod = val end },
-            { text = "30y (Frostbolt)", value = "30y", onSelect = function(val) c.rangeMethod = val end },
-            { text = "35y (Fireball)", value = "35y", onSelect = function(val) c.rangeMethod = val end },
+        -- Default range value to spell's actual range if not set
+        if not c.rangeVal and s and s.name then
+            local spellRange = _G.JamboSpells and _G.JamboSpells:GetSpellRange(s.name)
+            c.rangeVal = spellRange or 30
+        end
+        c.rangeOp = c.rangeOp or "<="
+        c.rangeVal = c.rangeVal or 30
+        
+        -- Range operator dropdown
+        setDropdownOptions(ce.grpSpell.rangeOp, c.rangeOp or "<=", {
+            { text = "<=", value = "<=", onSelect = function(val) c.rangeOp = val end },
+            { text = ">", value = ">", onSelect = function(val) c.rangeOp = val end },
         })
+        ce.grpSpell.rangeOp:SetShown(c.chkRange)
+        
+        -- Range value input
+        ce.grpSpell.rangeVal:SetText(tostring(c.rangeVal or 30))
+        ce.grpSpell.rangeVal:SetScript("OnTextChanged", function(self)
+            local val = tonumber(self:GetText()) or 30
+            c.rangeVal = val
+        end)
+        ce.grpSpell.rangeVal:SetShown(c.chkRange)
         
         -- Range unit dropdown
         setDropdownOptions(ce.grpSpell.rangeUnit, c.rangeUnit or "target", {
@@ -996,6 +1031,7 @@ function UI:EditCondition(idx)
             { text = "player", value = "player", onSelect = function(val) c.rangeUnit = val end },
             { text = "mouseover", value = "mouseover", onSelect = function(val) c.rangeUnit = val end },
         })
+        ce.grpSpell.rangeUnit:SetShown(c.chkRange)
 
         -- Info/debug line
         local spellName = (not c.spellCondName or c.spellCondName == "AUTO") and (s and s.name) or c.spellCondName
@@ -1509,21 +1545,27 @@ function UI:EditCondition(idx)
         end)
         
         -- Range check
-        c.rangeMethod = c.rangeMethod or "10y"
+        c.rangeOp = c.rangeOp or "<="
+        c.rangeVal = c.rangeVal or 30
         ce.grpUnitTarget.rangeChk:SetChecked(c.checkRange)
         ce.grpUnitTarget.rangeChk:SetScript("OnClick", function()
             c.checkRange = ce.grpUnitTarget.rangeChk:GetChecked()
-            ce.grpUnitTarget.rangeMethod:SetShown(c.checkRange)
+            ce.grpUnitTarget.rangeOp:SetShown(c.checkRange)
+            ce.grpUnitTarget.rangeVal:SetShown(c.checkRange)
         end)
         
-        setDropdownOptions(ce.grpUnitTarget.rangeMethod, c.rangeMethod or "10y", {
-            { text = "10y (Duel)", value = "10y", onSelect = function(val) c.rangeMethod = val end },
-            { text = "20y (Fire Blast)", value = "20y", onSelect = function(val) c.rangeMethod = val end },
-            { text = "28y (Follow)", value = "28y", onSelect = function(val) c.rangeMethod = val end },
-            { text = "30y (Frostbolt)", value = "30y", onSelect = function(val) c.rangeMethod = val end },
-            { text = "35y (Fireball)", value = "35y", onSelect = function(val) c.rangeMethod = val end },
+        setDropdownOptions(ce.grpUnitTarget.rangeOp, c.rangeOp or "<=", {
+            { text = "<=", value = "<=", onSelect = function(val) c.rangeOp = val end },
+            { text = ">", value = ">", onSelect = function(val) c.rangeOp = val end },
         })
-        ce.grpUnitTarget.rangeMethod:SetShown(c.checkRange)
+        ce.grpUnitTarget.rangeOp:SetShown(c.checkRange)
+        
+        ce.grpUnitTarget.rangeVal:SetText(tostring(c.rangeVal or 30))
+        ce.grpUnitTarget.rangeVal:SetScript("OnTextChanged", function(self)
+            local val = tonumber(self:GetText()) or 30
+            c.rangeVal = val
+        end)
+        ce.grpUnitTarget.rangeVal:SetShown(c.checkRange)
         
         -- Class check
         ce.grpUnitTarget.classChk:SetChecked(c.checkClass)

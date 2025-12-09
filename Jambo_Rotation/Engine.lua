@@ -202,33 +202,43 @@ function E:CheckSpellCond(c, step)
             return false, "NoUnit" 
         end
         
-        local method = c.rangeMethod or "10y"
+        local rangeVal = c.rangeVal or 30
+        local rangeOp = c.rangeOp or "<="
         local inRange = false
         
-        -- Use IsSpellInRange or CheckInteractDistance based on method
-        if method == "10y" then
-            inRange = CheckInteractDistance(unit, 3)  -- Duel range
-        elseif method == "20y" then
-            inRange = IsSpellInRange("Fire Blast", unit) == 1
-        elseif method == "28y" then
-            inRange = CheckInteractDistance(unit, 4)  -- Follow range
-        elseif method == "30y" then
-            inRange = IsSpellInRange("Frostbolt", unit) == 1
-        elseif method == "35y" then
-            inRange = IsSpellInRange("Fireball", unit) == 1
-        else
-            -- Fallback to old method
-            if data.slot and data.slot > 0 and UnitExists(unit) then
-                local r = IsActionInRange(data.slot, unit)
-                if r == 1 then inRange = true
-                elseif r == 0 then inRange = false
-                else inRange = nil end
+        -- Try LibRangeCheck-3.0 first
+        local LRC = LibStub and LibStub("LibRangeCheck-3.0", true)
+        if LRC then
+            local minRange, maxRange = LRC:GetRange(unit)
+            if minRange and maxRange then
+                -- Use the maxRange value (upper bound of the bracket)
+                if rangeOp == "<=" then
+                    inRange = maxRange <= rangeVal
+                else -- ">"
+                    inRange = maxRange > rangeVal
+                end
+            end
+        end
+        
+        -- Fallback to IsSpellInRange/CheckInteractDistance if LibRangeCheck unavailable
+        if not inRange and not LRC then
+            -- Use CheckInteractDistance for known distances
+            if rangeVal <= 10 and rangeOp == "<=" then
+                inRange = CheckInteractDistance(unit, 3)  -- Duel range (10y)
+            elseif rangeVal <= 28 and rangeOp == "<=" then
+                inRange = CheckInteractDistance(unit, 4)  -- Follow range (28y)
+            elseif rangeVal <= 20 and rangeOp == "<=" then
+                inRange = IsSpellInRange("Fire Blast", unit) == 1
+            elseif rangeVal <= 30 and rangeOp == "<=" then
+                inRange = IsSpellInRange("Frostbolt", unit) == 1
+            elseif rangeVal <= 35 and rangeOp == "<=" then
+                inRange = IsSpellInRange("Fireball", unit) == 1
             end
         end
         
         -- If out of range, fail the condition
         if inRange == false then 
-            return false, "OutOfRange(" .. method .. ")" 
+            return false, "OutOfRange(" .. rangeOp .. rangeVal .. ")" 
         end
     end
 
@@ -426,28 +436,43 @@ function E:CheckUnitTarget(c)
 
     -- Range check
     if c.checkRange then
-        local method = c.rangeMethod or "10y"
+        local rangeVal = c.rangeVal or 30
+        local rangeOp = c.rangeOp or "<="
         local inRange = false
         
-        -- Use IsSpellInRange or CheckInteractDistance based on method
-        if method == "10y" then
-            inRange = CheckInteractDistance(unit, 3)  -- Duel range
-        elseif method == "20y" then
-            inRange = IsSpellInRange("Fire Blast", unit) == 1
-        elseif method == "28y" then
-            inRange = CheckInteractDistance(unit, 4)  -- Follow range
-        elseif method == "30y" then
-            inRange = IsSpellInRange("Frostbolt", unit) == 1
-        elseif method == "35y" then
-            inRange = IsSpellInRange("Fireball", unit) == 1
-        else
-            -- Fallback to old CheckInteractDistance
-            inRange = CheckInteractDistance(unit, 4)
+        -- Try LibRangeCheck-3.0 first
+        local LRC = LibStub and LibStub("LibRangeCheck-3.0", true)
+        if LRC then
+            local minRange, maxRange = LRC:GetRange(unit)
+            if minRange and maxRange then
+                -- Use the maxRange value (upper bound of the bracket)
+                if rangeOp == "<=" then
+                    inRange = maxRange <= rangeVal
+                else -- ">"
+                    inRange = maxRange > rangeVal
+                end
+            end
+        end
+        
+        -- Fallback to IsSpellInRange/CheckInteractDistance if LibRangeCheck unavailable
+        if not inRange and not LRC then
+            -- Use CheckInteractDistance for known distances
+            if rangeVal <= 10 and rangeOp == "<=" then
+                inRange = CheckInteractDistance(unit, 3)  -- Duel range (10y)
+            elseif rangeVal <= 28 and rangeOp == "<=" then
+                inRange = CheckInteractDistance(unit, 4)  -- Follow range (28y)
+            elseif rangeVal <= 20 and rangeOp == "<=" then
+                inRange = IsSpellInRange("Fire Blast", unit) == 1
+            elseif rangeVal <= 30 and rangeOp == "<=" then
+                inRange = IsSpellInRange("Frostbolt", unit) == 1
+            elseif rangeVal <= 35 and rangeOp == "<=" then
+                inRange = IsSpellInRange("Fireball", unit) == 1
+            end
         end
         
         -- If out of range, fail the condition
         if inRange == false then 
-            return false, "OutOfRange(" .. method .. ")" 
+            return false, "OutOfRange(" .. rangeOp .. rangeVal .. ")" 
         end
     end
 
