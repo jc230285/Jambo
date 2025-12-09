@@ -261,25 +261,30 @@ class FishingBotThread(threading.Thread):
         img = self.capture_zone()
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         
-        # Detect bobber colors - balanced to avoid water but catch actual bobber
-        # Based on WoW fishing bobber: red/orange fin, cyan/blue body
+        # NEW APPROACH: Use morphological operations to isolate small objects
+        # instead of trying to perfectly filter water with color alone
         
-        # 1. Red/Orange fin - moderately saturated (in-game lighting affects this)
-        red_lower = np.array([0, 80, 100])  # Sat 80+ to allow for lighting/shadows
-        red_upper = np.array([15, 255, 255])  # Include orange tones (hue up to 15)
+        # 1. Red/Orange fin - keep existing detection
+        red_lower = np.array([0, 80, 100])
+        red_upper = np.array([15, 255, 255])
         red_mask = cv2.inRange(hsv, red_lower, red_upper)
         
-        # 2. Blue/Teal body - moderately saturated cyan
-        # Water is typically hue 100-110 with sat 30-60
-        # Bobber should be hue 95-110 with sat 60+
-        blue_lower = np.array([95, 60, 80])  # Sat 60+ to exclude dull water
+        # 2. Blue/Teal - INCREASE saturation significantly to reduce water
+        blue_lower = np.array([95, 100, 100])  # Sat 100+ (was 60)
         blue_upper = np.array([110, 255, 255])
         blue_mask = cv2.inRange(hsv, blue_lower, blue_upper)
         
-        # Combine red and blue (no cork for now to avoid sky reflections)
+        # Combine masks
         combined_mask = cv2.bitwise_or(red_mask, blue_mask)
         
-        # Find contours on combined mask
+        # CRITICAL: Use morphological opening to remove large connected areas (water)
+        # while preserving small compact objects (bobber)
+        kernel = np.ones((3,3), np.uint8)
+        # Erode first to break connections, then dilate to restore small objects
+        combined_mask = cv2.erode(combined_mask, kernel, iterations=2)
+        combined_mask = cv2.dilate(combined_mask, kernel, iterations=1)
+        
+        # Find contours after morphological cleanup
         contours, _ = cv2.findContours(combined_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
         best_bobber = None
@@ -431,13 +436,13 @@ class FishingBotThread(threading.Thread):
             bgr = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
             hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
             
-            # Same thresholds as find_bobber - balanced for in-game lighting
+            # Same thresholds as find_bobber
             red_lower = np.array([0, 80, 100])
             red_upper = np.array([15, 255, 255])
             red_mask = cv2.inRange(hsv, red_lower, red_upper)
             red_pixels = np.sum(red_mask > 0)
             
-            blue_lower = np.array([95, 60, 80])
+            blue_lower = np.array([95, 100, 100])
             blue_upper = np.array([110, 255, 255])
             blue_mask = cv2.inRange(hsv, blue_lower, blue_upper)
             blue_pixels = np.sum(blue_mask > 0)
