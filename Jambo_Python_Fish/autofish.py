@@ -30,13 +30,20 @@ class WindowMgr:
         win32api.PostMessage(hwnd, win32con.WM_KEYUP, vk_code, 0)
 
     @staticmethod
-    def send_mouse_click(hwnd, x, y):
+    def send_mouse_click(hwnd, x, y, button='right'):
+        """Post a mouse click to the target window at client coordinates (x,y).
+        button: 'right' or 'left' (default 'right')"""
         if not hwnd:
             return
         l_param = win32api.MAKELONG(x, y)
-        win32api.PostMessage(hwnd, win32con.WM_RBUTTONDOWN, win32con.MK_RBUTTON, l_param)
-        time.sleep(0.1)
-        win32api.PostMessage(hwnd, win32con.WM_RBUTTONUP, 0, l_param)
+        if button == 'right':
+            win32api.PostMessage(hwnd, win32con.WM_RBUTTONDOWN, win32con.MK_RBUTTON, l_param)
+            time.sleep(0.08)
+            win32api.PostMessage(hwnd, win32con.WM_RBUTTONUP, 0, l_param)
+        else:
+            win32api.PostMessage(hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, l_param)
+            time.sleep(0.08)
+            win32api.PostMessage(hwnd, win32con.WM_LBUTTONUP, 0, l_param)
 
 # --- The Logic Thread ---
 class FishingBotThread(threading.Thread):
@@ -55,6 +62,16 @@ class FishingBotThread(threading.Thread):
         if not self.hwnd:
             self.update_log(f"Error: Window '{self.config['window_title']}' not found!")
             self.running = False
+        # Bobber history for training (list of dicts)
+        self.history_file = self.config.get('history_file', 'bobber_history.json')
+        self.bobber_history = []
+        # load existing history if present
+        try:
+            if os.path.exists(self.history_file):
+                with open(self.history_file, 'r') as hf:
+                    self.bobber_history = json.load(hf)
+        except Exception:
+            self.bobber_history = []
 
     def run(self):
         self.update_log("Bot Started.")
@@ -78,6 +95,18 @@ class FishingBotThread(threading.Thread):
                     continue
                 
                 self.update_log(f"Bobber found at {bobber_loc}")
+                # record detection into history
+                try:
+                    entry = {"ts": time.time(), "x": bobber_loc[0], "y": bobber_loc[1], "confidence": confidence}
+                    self.bobber_history.append(entry)
+                    # persist
+                    try:
+                        with open(self.history_file, 'w') as hf:
+                            json.dump(self.bobber_history, hf)
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
                 
                 # Show overlay with bobber location and confidence
                 if self.update_overlay:
@@ -96,7 +125,19 @@ class FishingBotThread(threading.Thread):
                         WindowMgr.send_mouse_click(self.hwnd, rel_x, rel_y)
                     else:
                         WindowMgr.send_key(self.hwnd, self.config['interact_key'])
-                        
+                    # After the 'real' interact, wait 1s then right-click the bobber center
+                    time.sleep(1.0)
+                    try:
+                        # If the bobber still appears at/near the detected location, perform a right-click
+                        still = self._is_bobber_still_at(bobber_loc[0], bobber_loc[1], check_radius=40)
+                        if still:
+                            rect = win32gui.GetWindowRect(self.hwnd)
+                            rel_x = int(bobber_loc[0] - rect[0])
+                            rel_y = int(bobber_loc[1] - rect[1])
+                            WindowMgr.send_mouse_click(self.hwnd, rel_x, rel_y, button='right')
+                    except Exception:
+                        pass
+
                     time.sleep(1.0 + random.uniform(0.5, 1.0))
                 else:
                     self.update_log("Timer expired. Recasting...")
@@ -218,6 +259,45 @@ class FishingBotThread(threading.Thread):
                 self.update_timeout(0)
             except Exception:
                 pass
+        return False
+
+    def _is_bobber_still_at(self, x, y, check_radius=30):
+        """Check a small region around absolute screen coords (x,y) for bobber-like color/texture.
+        Returns True if something resembling the bobber exists in that small region.
+        """
+        try:
+            left = int(x - check_radius // 2)
+            top = int(y - check_radius // 2)
+            monitor = {"top": top, "left": left, "width": check_radius, "height": check_radius}
+            with mss.mss() as sct:
+                img = np.array(sct.grab(monitor))
+            # Convert and check for similar hue (red/orange bobber)
+            bgr = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+            hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
+            lower1 = np.array([0, 50, 50])
+            upper1 = np.array([15, 255, 255])
+            mask = cv2.inRange(hsv, lower1, upper1)
+            cnts, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            if cnts:
+                c = max(cnts, key=cv2.contourArea)
+                if cv2.contourArea(c) > 10:
+                    return True
+            # If template exists, try quick template match on this small crop
+            tpl = None
+            if self.config.get('template_path') and os.path.exists(self.config.get('template_path')):
+                try:
+                    tpl = cv2.imread(self.config.get('template_path'))
+                    # scale template down if larger than crop
+                    th, tw = tpl.shape[:2]
+                    if th <= check_radius and tw <= check_radius:
+                        res = cv2.matchTemplate(bgr, tpl, cv2.TM_CCOEFF_NORMED)
+                        _, maxv, _, _ = cv2.minMaxLoc(res)
+                        if maxv > 0.6:
+                            return True
+                except Exception:
+                    pass
+        except Exception:
+            return False
         return False
 
     def stop(self):
