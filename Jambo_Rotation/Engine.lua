@@ -5,6 +5,9 @@ local E = NS.Engine
 
 local Utils = NS.Utils
 
+-- Track last spell cast times to prevent double-casting
+E.lastCastTime = E.lastCastTime or {}
+
 local function resolveSpell(step)
     if not step or not step.name then return nil end
     local key = step.name
@@ -194,6 +197,20 @@ function E:CheckSpellCond(c, step)
         local usable, noMana
         if data.slot and data.slot > 0 then usable, noMana = IsUsableAction(data.slot) else usable, noMana = IsUsableSpell(data.name) end
         if noMana then return false, "Mana" end
+    end
+
+    -- Check if this spell was recently cast (prevent double-cast)
+    if c.chkLastSpell then
+        local checkSpellName = (not c.lastSpellName or c.lastSpellName == "" or c.lastSpellName == "AUTO") and spellName or c.lastSpellName
+        local waitTime = c.lastSpellWait or 1.0
+        local lastCast = E.lastCastTime[checkSpellName]
+        
+        if lastCast then
+            local timeSince = GetTime() - lastCast
+            if timeSince < waitTime then
+                return false, string.format("LastCast:%.1fs", timeSince)
+            end
+        end
     end
 
     if c.chkRange then

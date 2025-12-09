@@ -37,6 +37,18 @@ SlashCmdList["JAMBOROT"] = function()
     if NS.UI.frame:IsShown() then NS.UI.frame:Hide() else NS.UI.frame:Show() end
 end
 
+-- Track spell casts for last spell checking
+local castTracker = CreateFrame("Frame")
+castTracker:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+castTracker:SetScript("OnEvent", function(_, event, unit, _, spellID)
+    if event == "UNIT_SPELLCAST_SUCCEEDED" and unit == "player" then
+        local spellName = GetSpellInfo(spellID)
+        if spellName then
+            NS.Engine.lastCastTime[spellName] = GetTime()
+        end
+    end
+end)
+
 local runner = CreateFrame("Frame")
 local tick = 0
 runner:SetScript("OnUpdate", function(_, elapsed)

@@ -523,6 +523,10 @@ function UI:RefreshConds()
                 if c.chkRange then table.insert(checks, "Rng:" .. (c.rangeUnit or "tgt")) end
                 if c.chkRemain then table.insert(checks, "CD" .. (c.remOp or "") .. (c.remVal or "")) end
                 if c.chkCharges then table.insert(checks, "Chg" .. (c.chargesOp or "") .. (c.chargesVal or "")) end
+                if c.chkLastSpell then 
+                    local lastSpellTxt = (c.lastSpellName or "AUTO") ~= "AUTO" and c.lastSpellName or "this"
+                    table.insert(checks, "Last:" .. lastSpellTxt .. "+" .. (c.lastSpellWait or 1) .. "s")
+                end
                 local checkStr = #checks > 0 and (" [" .. table.concat(checks, ",") .. "]") or ""
                 txt = string.format("SPELL:%s%s", spellName, checkStr)
             elseif c.type == "ITEM" then
@@ -752,9 +756,25 @@ function UI:CreateEditor(parent)
     ce.grpSpell.manaChk = newCheck(ce.grpSpell, "Check Mana")
     ce.grpSpell.manaChk:SetPoint("TOPLEFT", ce.grpSpell.chgChk, "BOTTOMLEFT", 0, -12)
 
+    -- Last Spell check (prevent double-cast)
+    ce.grpSpell.lastSpellChk = newCheck(ce.grpSpell, "Last Spell")
+    ce.grpSpell.lastSpellChk:SetPoint("TOPLEFT", ce.grpSpell.manaChk, "BOTTOMLEFT", 0, -8)
+    
+    ce.grpSpell.lastSpellName = newDropdown(ce.grpSpell, 150, "Spell")
+    ce.grpSpell.lastSpellName:ClearAllPoints()
+    ce.grpSpell.lastSpellName:SetPoint("LEFT", ce.grpSpell.lastSpellChk, "RIGHT", 10, 0)
+    
+    local waitLbl = ce.grpSpell:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    waitLbl:SetPoint("LEFT", ce.grpSpell.lastSpellName, "RIGHT", 10, 0)
+    waitLbl:SetText("Wait:")
+    
+    ce.grpSpell.lastSpellWait = newEditBox(ce.grpSpell, 50)
+    ce.grpSpell.lastSpellWait:ClearAllPoints()
+    ce.grpSpell.lastSpellWait:SetPoint("LEFT", waitLbl, "RIGHT", 5, 0)
+
     -- Range check with unit selector and range operator
     ce.grpSpell.rangeChk = newCheck(ce.grpSpell, "Check Range")
-    ce.grpSpell.rangeChk:SetPoint("TOPLEFT", ce.grpSpell.manaChk, "BOTTOMLEFT", 0, -8)
+    ce.grpSpell.rangeChk:SetPoint("TOPLEFT", ce.grpSpell.lastSpellChk, "BOTTOMLEFT", 0, -8)
     
     -- Range operator dropdown (<= or >)
     ce.grpSpell.rangeOp = newDropdown(ce.grpSpell, 60, "Op")
@@ -986,6 +1006,10 @@ function UI:EditCondition(idx)
         local chgOn = ce.grpSpell.chgChk:GetChecked()
         ce.grpSpell.chgOp:SetShown(chgOn)
         ce.grpSpell.chgVal:SetShown(chgOn)
+        
+        local lastSpellOn = ce.grpSpell.lastSpellChk:GetChecked()
+        ce.grpSpell.lastSpellName:SetShown(lastSpellOn)
+        ce.grpSpell.lastSpellWait:SetShown(lastSpellOn)
     end
 
     if c.type == "SPELL" then
@@ -1001,6 +1025,9 @@ function UI:EditCondition(idx)
         c.chkCharges = c.chkCharges or false
         c.chkMana = c.chkMana or false
         c.chkRange = c.chkRange or false
+        c.chkLastSpell = c.chkLastSpell or false
+        c.lastSpellName = c.lastSpellName or "AUTO"
+        c.lastSpellWait = c.lastSpellWait or 1.0
 
         -- Spell dropdown (unique spell names only)
         local items = { { text = "AUTO (action spell)", value = "AUTO", onSelect = function(val) c.spellCondName = val end } }
@@ -1046,6 +1073,32 @@ function UI:EditCondition(idx)
 
         ce.grpSpell.manaChk:SetChecked(c.chkMana)
         ce.grpSpell.manaChk:SetScript("OnClick", function() c.chkMana = ce.grpSpell.manaChk:GetChecked() end)
+
+        -- Last Spell check
+        ce.grpSpell.lastSpellChk:SetChecked(c.chkLastSpell)
+        ce.grpSpell.lastSpellChk:SetScript("OnClick", function()
+            c.chkLastSpell = ce.grpSpell.lastSpellChk:GetChecked()
+            refreshSpellToggles()
+        end)
+        
+        -- Last Spell name dropdown (same as spell condition dropdown)
+        local lastSpellItems = { { text = "AUTO (action spell)", value = "AUTO", onSelect = function(val) c.lastSpellName = val end } }
+        local seenLastSpell = {}
+        for _, d in pairs(NS.Book or {}) do
+            if d and d.type == "SPELL" and d.name and not d.name:find("_") and not seenLastSpell[d.name] then
+                seenLastSpell[d.name] = true
+                table.insert(lastSpellItems, { text = d.name, value = d.name, onSelect = function(val) c.lastSpellName = val end })
+            end
+        end
+        table.sort(lastSpellItems, function(a, b) return a.text < b.text end)
+        setDropdownOptions(ce.grpSpell.lastSpellName, c.lastSpellName or "AUTO", lastSpellItems)
+        
+        ce.grpSpell.lastSpellWait:SetText(tostring(c.lastSpellWait or 1.0))
+        ce.grpSpell.lastSpellWait:SetScript("OnTextChanged", function(self)
+            c.lastSpellWait = tonumber(self:GetText()) or 1.0
+        end)
+        
+        refreshSpellToggles()
 
         ce.grpSpell.rangeChk:SetChecked(c.chkRange)
         ce.grpSpell.rangeChk:SetScript("OnClick", function() 
