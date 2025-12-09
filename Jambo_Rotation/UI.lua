@@ -525,7 +525,7 @@ function UI:RefreshConds()
                 if c.chkCharges then table.insert(checks, "Chg" .. (c.chargesOp or "") .. (c.chargesVal or "")) end
                 local checkStr = #checks > 0 and (" [" .. table.concat(checks, ",") .. "]") or ""
                 txt = string.format("SPELL:%s%s", spellName, checkStr)
-            elseif c.type == "PLAYER" or c.type == "UNIT" then
+            elseif c.type == "PLAYER" then
                 txt = "PLAYER:"
                 local checks = {}
                 if c.inCombat then table.insert(checks, "InCombat") end
@@ -541,8 +541,8 @@ function UI:RefreshConds()
                 else
                     txt = txt .. " No conditions"
                 end
-            elseif c.type == "UNIT_TARGET" or c.type == "TARGET" then
-                local unit = c.unit or "target"
+            elseif c.type == "UNIT" or c.type == "UNIT_TARGET" or c.type == "TARGET" then
+                local unit = c.targetUnit or c.unit or "target"
                 local checks = {}
                 if c.friendly then table.insert(checks, "Friendly") end
                 if c.hostile then table.insert(checks, "Hostile") end

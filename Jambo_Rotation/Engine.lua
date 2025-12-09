@@ -205,21 +205,19 @@ function E:CheckSpellCond(c, step)
         local inRange = nil
         if data.slot and data.slot > 0 then
             inRange = IsActionInRange(data.slot, unit)
-        else
-            inRange = IsSpellInRange(data.name, unit)
         end
         
         -- inRange: 1=in range, 0=out of range, nil=no range limit
         local rangeStatus = "?"
         if inRange == 1 then rangeStatus = "IN"
         elseif inRange == 0 then rangeStatus = "OUT"
-        else rangeStatus = "NIL" end
+        else rangeStatus = "NoLim" end
         
         -- If spell has a range and we're out of range, fail
-        if inRange == 0 and data.range and data.range > 0 then 
-            return false, "OutOfRange(max:" .. data.range .. ")" 
+        if inRange == 0 then 
+            return false, "OutOfRange(max:" .. (data.range or "?") .. ")" 
         end
-        -- If inRange is nil but spell has a range, assume out of range to be safe
+        -- Only fail on nil if spell actually has a range defined
         if inRange == nil and data.range and data.range > 0 then
             return false, "Range?(" .. rangeStatus .. ",max:" .. data.range .. ")" 
         end
@@ -236,13 +234,12 @@ function E:CheckSpellCond(c, step)
             local inRange = nil
             if data.slot and data.slot > 0 then
                 inRange = IsActionInRange(data.slot, unit)
-            else
-                inRange = IsSpellInRange(data.name, unit)
             end
             local rangeStr = "?"
             if inRange == 1 then rangeStr = "IN"
             elseif inRange == 0 then rangeStr = "OUT"
-            else rangeStr = "NIL" end
+            elseif inRange == nil then rangeStr = "NoLim"
+            else rangeStr = "?" end
             table.insert(parts, "RngChk:" .. rangeStr)
         end
     end
