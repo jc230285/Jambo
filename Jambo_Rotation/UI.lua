@@ -839,11 +839,11 @@ function UI:CreateEditor(parent)
     ce.grpUnitTarget.casting = newCheck(ce.grpUnitTarget, "Casting")
     ce.grpUnitTarget.casting:SetPoint("TOPLEFT", 120, -190)
     
-    -- Range check
+    -- Range check with range method dropdown
     ce.grpUnitTarget.rangeChk = newCheck(ce.grpUnitTarget, "Range Check")
     ce.grpUnitTarget.rangeChk:SetPoint("TOPLEFT", 10, -220)
-    ce.grpUnitTarget.rangeVal = newDropdown(ce.grpUnitTarget, 80, "Range")
-    ce.grpUnitTarget.rangeVal:SetPoint("TOPLEFT", 120, -230)
+    ce.grpUnitTarget.rangeMethod = newDropdown(ce.grpUnitTarget, 100, "Range")
+    ce.grpUnitTarget.rangeMethod:SetPoint("TOPLEFT", 120, -230)
     
     -- Class check
     ce.grpUnitTarget.classChk = newCheck(ce.grpUnitTarget, "Check Class")
@@ -1509,23 +1509,21 @@ function UI:EditCondition(idx)
         end)
         
         -- Range check
+        c.rangeMethod = c.rangeMethod or "10y"
         ce.grpUnitTarget.rangeChk:SetChecked(c.checkRange)
         ce.grpUnitTarget.rangeChk:SetScript("OnClick", function()
             c.checkRange = ce.grpUnitTarget.rangeChk:GetChecked()
-            ce.grpUnitTarget.rangeVal:SetShown(c.checkRange)
+            ce.grpUnitTarget.rangeMethod:SetShown(c.checkRange)
         end)
         
-        setDropdownOptions(ce.grpUnitTarget.rangeVal, tostring(c.rangeVal), {
-            { text = "5", value = "5", onSelect = function(val) c.rangeVal = tonumber(val) end },
-            { text = "8", value = "8", onSelect = function(val) c.rangeVal = tonumber(val) end },
-            { text = "10", value = "10", onSelect = function(val) c.rangeVal = tonumber(val) end },
-            { text = "15", value = "15", onSelect = function(val) c.rangeVal = tonumber(val) end },
-            { text = "20", value = "20", onSelect = function(val) c.rangeVal = tonumber(val) end },
-            { text = "25", value = "25", onSelect = function(val) c.rangeVal = tonumber(val) end },
-            { text = "30", value = "30", onSelect = function(val) c.rangeVal = tonumber(val) end },
-            { text = "40", value = "40", onSelect = function(val) c.rangeVal = tonumber(val) end },
+        setDropdownOptions(ce.grpUnitTarget.rangeMethod, c.rangeMethod or "10y", {
+            { text = "10y (Duel)", value = "10y", onSelect = function(val) c.rangeMethod = val end },
+            { text = "20y (Fire Blast)", value = "20y", onSelect = function(val) c.rangeMethod = val end },
+            { text = "28y (Follow)", value = "28y", onSelect = function(val) c.rangeMethod = val end },
+            { text = "30y (Frostbolt)", value = "30y", onSelect = function(val) c.rangeMethod = val end },
+            { text = "35y (Fireball)", value = "35y", onSelect = function(val) c.rangeMethod = val end },
         })
-        ce.grpUnitTarget.rangeVal:SetShown(c.checkRange)
+        ce.grpUnitTarget.rangeMethod:SetShown(c.checkRange)
         
         -- Class check
         ce.grpUnitTarget.classChk:SetChecked(c.checkClass)

@@ -426,10 +426,29 @@ function E:CheckUnitTarget(c)
 
     -- Range check
     if c.checkRange then
-        local range = c.rangeVal or 30
-        local inRange = CheckInteractDistance(unit, 4) -- General interaction distance
-        -- For more precise range checking, we'd need to use spell range checks
-        if not inRange and range <= 5 then return false, "OutOfRange" end
+        local method = c.rangeMethod or "10y"
+        local inRange = false
+        
+        -- Use IsSpellInRange or CheckInteractDistance based on method
+        if method == "10y" then
+            inRange = CheckInteractDistance(unit, 3)  -- Duel range
+        elseif method == "20y" then
+            inRange = IsSpellInRange("Fire Blast", unit) == 1
+        elseif method == "28y" then
+            inRange = CheckInteractDistance(unit, 4)  -- Follow range
+        elseif method == "30y" then
+            inRange = IsSpellInRange("Frostbolt", unit) == 1
+        elseif method == "35y" then
+            inRange = IsSpellInRange("Fireball", unit) == 1
+        else
+            -- Fallback to old CheckInteractDistance
+            inRange = CheckInteractDistance(unit, 4)
+        end
+        
+        -- If out of range, fail the condition
+        if inRange == false then 
+            return false, "OutOfRange(" .. method .. ")" 
+        end
     end
 
     -- Class check
