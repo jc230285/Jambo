@@ -278,11 +278,10 @@ class FishingBotThread(threading.Thread):
         combined_mask = cv2.bitwise_or(red_mask, blue_mask)
         
         # CRITICAL: Use morphological opening to remove large connected areas (water)
-        # while preserving small compact objects (bobber)
-        kernel = np.ones((3,3), np.uint8)
-        # Erode first to break connections, then dilate to restore small objects
-        combined_mask = cv2.erode(combined_mask, kernel, iterations=2)
-        combined_mask = cv2.dilate(combined_mask, kernel, iterations=1)
+        # Increase erosion to 4 iterations to more aggressively break up water
+        kernel = np.ones((5,5), np.uint8)  # Larger kernel (was 3x3)
+        combined_mask = cv2.erode(combined_mask, kernel, iterations=4)  # More erosion (was 2)
+        combined_mask = cv2.dilate(combined_mask, kernel, iterations=2)  # Restore small objects
         
         # Find contours after morphological cleanup
         contours, _ = cv2.findContours(combined_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -303,37 +302,36 @@ class FishingBotThread(threading.Thread):
             
             x, y, w, h = cv2.boundingRect(cnt)
             
-            # Reject if too wide or too flat (bobber should be tallish)
+            # Reject if too wide or too tall
             if w > 100 or h > 100:
                 print(f"  Rejected: size {w}x{h} exceeds 100")
                 continue
-            if w > h:  # Width should not exceed height for a bobber
-                print(f"  Rejected: width {w} > height {h} (not vertical)")
+            
+            # Relax vertical requirement - allow width up to 1.5x height (bobber can be tilted)
+            if w > h * 1.5:
+                print(f"  Rejected: width {w} > 1.5*height {h} (too horizontal)")
                 continue
             
             # Calculate how many bobber components are present in this region
             roi_red = red_mask[y:y+h, x:x+w]
             roi_blue = blue_mask[y:y+h, x:x+w]
-            roi_cork = cork_mask[y:y+h, x:x+w]
             
             red_pixels = np.sum(roi_red > 0)
             blue_pixels = np.sum(roi_blue > 0)
-            cork_pixels = np.sum(roi_cork > 0)
             
-            # Count components (reduced threshold)
-            component_count = (red_pixels > 3) + (blue_pixels > 3) + (cork_pixels > 3)
+            # Count components - need at least red OR blue
+            component_count = (red_pixels > 3) + (blue_pixels > 3)
             
-            print(f"  Candidate: pos ({x},{y}) size {w}x{h}, area {area:.1f}, red={red_pixels} blue={blue_pixels} cork={cork_pixels}, components={component_count}")
+            print(f"  Candidate: pos ({x},{y}) size {w}x{h}, area {area:.1f}, red={red_pixels} blue={blue_pixels}, components={component_count}")
             
-            # Prefer tall, narrow shapes (bobber is vertical)
-            aspect_ratio = h / float(max(w, 1))
-            
-            # Combined score: prioritize having components + vertical shape
-            # Lower requirement - accept 1+ components instead of 2+
             if component_count < 1:
                 print(f"    Rejected: no components found")
                 continue
             
+            # Prefer tall, narrow shapes (bobber is vertical)
+            aspect_ratio = h / float(max(w, 1))
+            
+            # Score based on: area + components + aspect ratio
             score = component_count * 100 + aspect_ratio * 10 + area * 0.5
             
             if score > best_score:
@@ -344,14 +342,14 @@ class FishingBotThread(threading.Thread):
             cnt, x, y, w, h, components = best_bobber
             
             # Debug output
-            print(f"Bobber detected at zone coords ({x},{y}) size {w}x{h}, components: {components}/3, score: {best_score:.1f}")
+            print(f"Bobber detected at zone coords ({x},{y}) size {w}x{h}, components: {components}/2, score: {best_score:.1f}")
             
             # Draw outline around detected bobber
             cv2.drawContours(img, [cnt], -1, (0, 255, 0), 2)
             
             # Draw colored boxes for each component detected
             cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 255), 1)
-            cv2.putText(img, f"Bobber ({components}/3)", (x, y-5), 
+            cv2.putText(img, f"Bobber ({components}/2)", (x, y-5), 
                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0), 1)
             
             self.update_preview(img)
