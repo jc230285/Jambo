@@ -1,0 +1,17 @@
+## Interface: 110007
+## Title: Jambo_Bags
+## Notes: Lightweight bag addon with Auto-BiS categories.
+## Author: Jambo
+## Version: 1.0
+## SavedVariables: JamboBagsDB
+
+# Core Initialization
+Core.lua
+
+# BiS & Scoring System
+BiS\Data.lua
+BiS\Scoring.lua
+BiS\Config.lua
+
+# Visuals
+Views\BagFrame.lua

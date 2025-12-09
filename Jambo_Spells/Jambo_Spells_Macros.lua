@@ -191,10 +191,10 @@ function J:CreateUtilityMacros()
     -- Dynamic AutoAttack based on wand presence
     local autoAttackBody, autoAttackIcon
     if hasWand then
-        autoAttackBody = "#showtooltip 18\n/cleartarget [dead]\n/targetenemy [noexists]\n/assist [help]\n/petattack [harm,nodead]\n/castsequence [harm,nodead] reset=2 !Shoot, null"
+        autoAttackBody = "#showtooltip 18\n/cleartarget [dead]\n/targetenemy [noexists]\n/castsequence [harm,nodead] reset=3 !Shoot, null\n/assist [help]"
         autoAttackIcon = "INV_MISC_QUESTIONMARK"  -- Wand icon
     else
-        autoAttackBody = "#showtooltip 16\n/cleartarget [dead]\n/targetenemy [noexists]\n/assist [help]\n/petattack [harm,nodead]\n/startattack [harm,nodead]"
+        autoAttackBody = "#showtooltip 16\n/cleartarget [dead]\n/targetenemy [noexists]\n/startattack [harm,nodead]\n/assist [help]"
         autoAttackIcon = "INV_MISC_QUESTIONMARK"  -- Melee attack icon
     end
     
@@ -206,8 +206,6 @@ function J:CreateUtilityMacros()
         {"AutoMana", "INV_MISC_QUESTIONMARK", "#showtooltip item:2455\n/use item:2455"}, 
         {"AutoBandage", "INV_MISC_QUESTIONMARK", "#showtooltip item:1251\n/use [target=player] item:1251"},
         {"AutoScrolls", "INV_MISC_QUESTIONMARK", "#showtooltip item:955\n/use Scroll of Strength\n/use Scroll of Agility"},
-        {"Break 10", "254288", "/dbm timer 600 10 Minute Break!\n/y 10 Minute Break!"},
-        {"Break 5", "132161", "/dbm timer 300 5 Minute Break!\n/y 5 Minute Break!"},
         {"CycleEnemy", "132108", "#showtooltip\n/cleartarget [dead][noexists]\n/targetenemy [noexists][dead]"},
         {"CycleFriend", "132108", "#showtooltip\n/cleartarget [dead][noexists]\n/targetfriend [noharm]"},
         {"Reload", "132096", "/reload"},
@@ -215,6 +213,8 @@ function J:CreateUtilityMacros()
         {"AutoAttack", autoAttackIcon, autoAttackBody},
         {"T1", "INV_MISC_QUESTIONMARK", "#showtooltip 13\n/use 13"},
         {"T2", "INV_MISC_QUESTIONMARK", "#showtooltip 14\n/use 14"},
+        {"Break 10", "254288", "/dbm timer 600 10 Minute Break!\n/y 10 Minute Break!"},
+        {"Break 5", "132161", "/dbm timer 300 5 Minute Break!\n/y 5 Minute Break!"},
     }
     
     for _, m in ipairs(macros) do

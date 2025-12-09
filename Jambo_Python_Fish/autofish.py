@@ -12,6 +12,8 @@ from PIL import Image, ImageTk
 import random
 import os
 import json
+import ctypes
+from ctypes import wintypes
 
 # --- Utilities for Background Input ---
 class WindowMgr:
@@ -30,11 +32,49 @@ class WindowMgr:
         win32api.PostMessage(hwnd, win32con.WM_KEYUP, vk_code, 0)
 
     @staticmethod
-    def send_mouse_click(hwnd, x, y, button='right'):
+    def move_mouse_smooth(target_x, target_y, duration=0.3):
+        """Move mouse cursor smoothly to target screen coordinates using human-like bezier curve."""
+        try:
+            # Get current cursor position
+            class POINT(ctypes.Structure):
+                _fields_ = [("x", ctypes.c_long), ("y", ctypes.c_long)]
+            pt = POINT()
+            ctypes.windll.user32.GetCursorPos(ctypes.byref(pt))
+            start_x, start_y = pt.x, pt.y
+            
+            # Generate bezier control points for natural movement
+            steps = int(duration * 60)  # 60 steps per second
+            if steps < 5:
+                steps = 5
+            
+            # Add slight randomness to control point
+            mid_x = (start_x + target_x) / 2 + random.randint(-20, 20)
+            mid_y = (start_y + target_y) / 2 + random.randint(-20, 20)
+            
+            for i in range(steps + 1):
+                t = i / steps
+                # Quadratic bezier curve
+                x = int((1-t)**2 * start_x + 2*(1-t)*t * mid_x + t**2 * target_x)
+                y = int((1-t)**2 * start_y + 2*(1-t)*t * mid_y + t**2 * target_y)
+                ctypes.windll.user32.SetCursorPos(x, y)
+                time.sleep(duration / steps)
+        except Exception as e:
+            print(f"Mouse move error: {e}")
+    
+    @staticmethod
+    def send_mouse_click(hwnd, x, y, button='right', move_cursor=False, screen_x=None, screen_y=None):
         """Post a mouse click to the target window at client coordinates (x,y).
-        button: 'right' or 'left' (default 'right')"""
+        button: 'right' or 'left' (default 'right')
+        move_cursor: if True, physically move cursor to screen_x, screen_y before clicking
+        """
         if not hwnd:
             return
+        
+        # Optionally move cursor in human-like way
+        if move_cursor and screen_x is not None and screen_y is not None:
+            WindowMgr.move_mouse_smooth(screen_x, screen_y, duration=random.uniform(0.2, 0.4))
+            time.sleep(random.uniform(0.05, 0.15))
+        
         l_param = win32api.MAKELONG(x, y)
         if button == 'right':
             win32api.PostMessage(hwnd, win32con.WM_RBUTTONDOWN, win32con.MK_RBUTTON, l_param)
@@ -145,7 +185,9 @@ class FishingBotThread(threading.Thread):
                     except Exception:
                         pass
 
-                if self.watch_bobber(bobber_loc):
+                splash_detected = self.watch_bobber(bobber_loc)
+                
+                if splash_detected:
                     self.update_log("Splash detected! Reeling in...")
                     
                     if self.config.get('use_background_clicks', False):
@@ -155,22 +197,38 @@ class FishingBotThread(threading.Thread):
                         WindowMgr.send_mouse_click(self.hwnd, rel_x, rel_y)
                     else:
                         WindowMgr.send_key(self.hwnd, self.config['interact_key'])
-                    # After the 'real' interact, wait 1s then right-click the bobber center
-                    time.sleep(1.0)
+                    
+                    time.sleep(1.0 + random.uniform(0.5, 1.0))
+                else:
+                    # Reel FAILED (timeout) - check if bobber still present before right-clicking
+                    self.update_log("Reel timeout. Checking if bobber still present...")
+                    time.sleep(0.5)
+                    
                     try:
-                        # If the bobber still appears at/near the detected location, perform a right-click
-                        still = self._is_bobber_still_at(bobber_loc[0], bobber_loc[1], check_radius=40)
-                        if still:
+                        # Only proceed if bobber is CONFIRMED still at the location
+                        still_present = self._is_bobber_still_at(bobber_loc[0], bobber_loc[1], check_radius=50)
+                        
+                        if still_present:
+                            self.update_log("Bobber confirmed present - performing human-like right-click...")
                             rect = win32gui.GetWindowRect(self.hwnd)
                             rel_x = int(bobber_loc[0] - rect[0])
                             rel_y = int(bobber_loc[1] - rect[1])
-                            WindowMgr.send_mouse_click(self.hwnd, rel_x, rel_y, button='right')
-                    except Exception:
-                        pass
-
-                    time.sleep(1.0 + random.uniform(0.5, 1.0))
-                else:
-                    self.update_log("Timer expired. Recasting...")
+                            # Move cursor in human-like way, then right-click
+                            WindowMgr.send_mouse_click(
+                                self.hwnd, rel_x, rel_y, 
+                                button='right', 
+                                move_cursor=True, 
+                                screen_x=bobber_loc[0], 
+                                screen_y=bobber_loc[1]
+                            )
+                            time.sleep(random.uniform(0.3, 0.6))
+                        else:
+                            self.update_log("Bobber NOT present - skipping right-click (safety)")
+                    except Exception as e:
+                        self.update_log(f"Safety check error: {e}")
+                    
+                    time.sleep(1.0 + random.uniform(0.3, 0.8))
+                
                 # Hide overlay after watching
                 if self.update_overlay:
                     try:
@@ -293,7 +351,8 @@ class FishingBotThread(threading.Thread):
 
     def _is_bobber_still_at(self, x, y, check_radius=30):
         """Check a small region around absolute screen coords (x,y) for bobber-like color/texture.
-        Returns True if something resembling the bobber exists in that small region.
+        Returns True ONLY if bobber is confidently detected in that region.
+        Uses both color mask AND template matching for high confidence.
         """
         try:
             left = int(x - check_radius // 2)
@@ -301,33 +360,52 @@ class FishingBotThread(threading.Thread):
             monitor = {"top": top, "left": left, "width": check_radius, "height": check_radius}
             with mss.mss() as sct:
                 img = np.array(sct.grab(monitor))
-            # Convert and check for similar hue (red/orange bobber)
+            
             bgr = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+            
+            # Check 1: Color mask for red/orange bobber
             hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
-            lower1 = np.array([0, 50, 50])
+            lower1 = np.array([0, 60, 60])
             upper1 = np.array([15, 255, 255])
             mask = cv2.inRange(hsv, lower1, upper1)
             cnts, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            
+            color_match = False
             if cnts:
                 c = max(cnts, key=cv2.contourArea)
-                if cv2.contourArea(c) > 10:
-                    return True
-            # If template exists, try quick template match on this small crop
-            tpl = None
+                area = cv2.contourArea(c)
+                # Require minimum area to avoid false positives
+                if area > 20:
+                    color_match = True
+            
+            # Check 2: Template matching (if template exists)
+            template_match = False
             if self.config.get('template_path') and os.path.exists(self.config.get('template_path')):
                 try:
                     tpl = cv2.imread(self.config.get('template_path'))
-                    # scale template down if larger than crop
                     th, tw = tpl.shape[:2]
+                    # Only use template if it fits in the check region
                     if th <= check_radius and tw <= check_radius:
                         res = cv2.matchTemplate(bgr, tpl, cv2.TM_CCOEFF_NORMED)
                         _, maxv, _, _ = cv2.minMaxLoc(res)
-                        if maxv > 0.6:
-                            return True
+                        # Higher threshold for safety
+                        if maxv > 0.7:
+                            template_match = True
                 except Exception:
                     pass
-        except Exception:
+            
+            # Require BOTH color AND template match for high confidence
+            # If no template, require only color match but with stricter area requirement
+            if template_match and color_match:
+                return True
+            elif not self.config.get('template_path') and color_match:
+                # If no template available, be more conservative
+                return cnts and cv2.contourArea(max(cnts, key=cv2.contourArea)) > 50
+            
+        except Exception as e:
+            print(f"Bobber check error: {e}")
             return False
+        
         return False
 
     def stop(self):
