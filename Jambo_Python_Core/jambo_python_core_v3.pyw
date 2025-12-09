@@ -750,6 +750,7 @@ class Overlay(tk.Tk):
         row1 = tk.Frame(c, bg="#111"); row1.pack(side="bottom", fill="x", pady=(2,0))
         opts = {"side": "left", "fill": "x", "expand": True, "padx": 1}
         tk.Button(row1, text="Exit", bg="#442222", fg="white", command=self._quit_app).pack(**opts)
+        tk.Button(row1, text="Restart", bg="#333", fg="white", command=self._restart_app).pack(**opts)
         tk.Button(row1, text="Options", bg="#333", fg="white", command=self._toggle_options).pack(**opts)
         tk.Button(row1, text="Inspector", bg="#333", fg="#00aaff", command=self._toggle_inspector).pack(**opts)
         
@@ -770,6 +771,23 @@ class Overlay(tk.Tk):
         except Exception:
             pass
         self.destroy(); sys.exit()
+    
+    def _restart_app(self):
+        """Restart the Python application."""
+        try:
+            self._uninstall_keyboard_hook()
+        except Exception:
+            pass
+        try:
+            # Restart using the same Python executable and script
+            python = sys.executable
+            script = os.path.abspath(sys.argv[0])
+            self.destroy()
+            os.execl(python, python, script, *sys.argv[1:])
+        except Exception as e:
+            messagebox.showerror("Restart Failed", f"Failed to restart: {e}")
+            sys.exit()
+    
     def _toggle_options(self):
         if not self.opt_window or not tk.Toplevel.winfo_exists(self.opt_window): self.opt_window = OptionsWindow(self)
         else: self.opt_window.lift()

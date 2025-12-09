@@ -125,6 +125,7 @@ function UI:Init()
     
     frame = CreateFrame("Frame", "JamboTargetFrame", UIParent, "BackdropTemplate")
     frame:SetSize(C.FRAME_WIDTH, 600)
+    frame:SetScale(0.8)
     SkinFrame(frame)
     
     local savedPos = NS.db.options.targetFrameOffset

@@ -92,14 +92,35 @@ function J:InitUI()
     J.frame = f; f:Hide()
 end
 
-function J:Toggle() if not J.frame then J:InitUI() end; if J.frame:IsShown() then J.frame:Hide() else J.frame:Show() end end
+function J:Toggle() 
+    if not J.frame then J:InitUI() end
+    if J.frame:IsShown() then 
+        J.frame:Hide() 
+    else 
+        J.frame:Show()
+        J:RefreshUI()  -- Refresh the UI when showing it
+    end 
+end
 
 function J:RefreshUI()
     if not J.frame or not J.frame:IsShown() then return end
     local data = J.data.spells or {}
     table.sort(data, function(a,b)
-        local v1, v2 = a[SORT_KEY] or 0, b[SORT_KEY] or 0
-        if SORT_DESC then return v1 > v2 else return v1 < v2 end
+        -- If sorting by NAME, group by name then rank (highest first)
+        if SORT_KEY == "NAME" then
+            local nameA = a.NAME or ""
+            local nameB = b.NAME or ""
+            if nameA ~= nameB then
+                if SORT_DESC then return nameA > nameB else return nameA < nameB end
+            else
+                -- Same name, sort by rank descending (highest rank on top)
+                return (a.RANK or 0) > (b.RANK or 0)
+            end
+        else
+            -- For other sort keys, use the value comparison
+            local v1, v2 = a[SORT_KEY] or 0, b[SORT_KEY] or 0
+            if SORT_DESC then return v1 > v2 else return v1 < v2 end
+        end
     end)
     local offset = FauxScrollFrame_GetOffset(J.scrollFrame) or 0
     

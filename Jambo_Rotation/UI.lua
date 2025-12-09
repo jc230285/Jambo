@@ -698,6 +698,7 @@ function UI:CreateEditor(parent)
     ce.grpSpell.ddSpell = newDropdown(ce.grpSpell, 220)
     ce.grpSpell.ddSpell:SetPoint("TOPLEFT", splLbl, "BOTTOMLEFT", -15, -2)
 
+    -- Cooldown/Charges checks
     ce.grpSpell.remChk = newCheck(ce.grpSpell, "RemTime")
     ce.grpSpell.remChk:SetPoint("TOPLEFT", ce.grpSpell.ddSpell, "BOTTOMLEFT", 15, -10)
     ce.grpSpell.remOp = newDropdown(ce.grpSpell, 70, "Op")
@@ -708,7 +709,7 @@ function UI:CreateEditor(parent)
     ce.grpSpell.remVal:SetPoint("LEFT", ce.grpSpell.remOp, "RIGHT", 8, 0)
 
     ce.grpSpell.chgChk = newCheck(ce.grpSpell, "Charges")
-    ce.grpSpell.chgChk:SetPoint("TOPLEFT", ce.grpSpell.remChk, "BOTTOMLEFT", 0, -10)
+    ce.grpSpell.chgChk:SetPoint("TOPLEFT", ce.grpSpell.remChk, "BOTTOMLEFT", 0, -8)
     ce.grpSpell.chgOp = newDropdown(ce.grpSpell, 70, "Op")
     ce.grpSpell.chgOp:ClearAllPoints()
     ce.grpSpell.chgOp:SetPoint("LEFT", ce.grpSpell.chgChk, "RIGHT", 10, 0)
@@ -716,25 +717,29 @@ function UI:CreateEditor(parent)
     ce.grpSpell.chgVal:ClearAllPoints()
     ce.grpSpell.chgVal:SetPoint("LEFT", ce.grpSpell.chgOp, "RIGHT", 8, 0)
 
+    -- Resource checks
     ce.grpSpell.manaChk = newCheck(ce.grpSpell, "Check Mana")
-    ce.grpSpell.manaChk:SetPoint("TOPLEFT", ce.grpSpell.chgChk, "BOTTOMLEFT", 0, -10)
+    ce.grpSpell.manaChk:SetPoint("TOPLEFT", ce.grpSpell.chgChk, "BOTTOMLEFT", 0, -12)
 
+    -- Range check with unit selector
     ce.grpSpell.rangeChk = newCheck(ce.grpSpell, "Check Range")
-    ce.grpSpell.rangeChk:SetPoint("TOPLEFT", ce.grpSpell.manaChk, "BOTTOMLEFT", 0, -10)
+    ce.grpSpell.rangeChk:SetPoint("TOPLEFT", ce.grpSpell.manaChk, "BOTTOMLEFT", 0, -8)
     ce.grpSpell.rangeUnit = newDropdown(ce.grpSpell, 140, "Range Unit")
     ce.grpSpell.rangeUnit:ClearAllPoints()
     ce.grpSpell.rangeUnit:SetPoint("LEFT", ce.grpSpell.rangeChk, "RIGHT", 18, 0)
-    ce.grpSpell.rangeUnit:SetPoint("CENTER", ce.grpSpell.rangeChk, "CENTER", 18, 0)
 
+    -- Info/debug line - now shows more detailed info including actual spell range
     ce.grpSpell.info = ce.grpSpell:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    ce.grpSpell.info:SetPoint("TOPLEFT", ce.grpSpell.rangeChk, "BOTTOMLEFT", 0, -12)
+    ce.grpSpell.info:SetPoint("TOPLEFT", ce.grpSpell.rangeChk, "BOTTOMLEFT", 0, -8)
+    ce.grpSpell.info:SetWidth(450)
+    ce.grpSpell.info:SetJustifyH("LEFT")
     ce.grpSpell.info:SetText("--")
 
     -- Player/Unit group
     ce.grpUnit = CreateFrame("Frame", nil, ce)
     ce.grpUnit:SetAllPoints()
     
-    -- Combat checkboxes
+    -- Combat checkboxes (on same line for compactness)
     ce.grpUnit.inCombat = newCheck(ce.grpUnit, "In Combat")
     ce.grpUnit.inCombat:SetPoint("TOPLEFT", 10, -60)
     ce.grpUnit.outCombat = newCheck(ce.grpUnit, "Out of Combat")
@@ -742,19 +747,19 @@ function UI:CreateEditor(parent)
     
     -- Mounted checkboxes
     ce.grpUnit.mounted = newCheck(ce.grpUnit, "Mounted")
-    ce.grpUnit.mounted:SetPoint("TOPLEFT", 10, -90)
+    ce.grpUnit.mounted:SetPoint("TOPLEFT", 10, -85)
     ce.grpUnit.notMounted = newCheck(ce.grpUnit, "Not Mounted")
-    ce.grpUnit.notMounted:SetPoint("TOPLEFT", 120, -90)
+    ce.grpUnit.notMounted:SetPoint("TOPLEFT", 120, -85)
     
     -- Moving checkboxes
     ce.grpUnit.moving = newCheck(ce.grpUnit, "Moving")
-    ce.grpUnit.moving:SetPoint("TOPLEFT", 10, -120)
+    ce.grpUnit.moving:SetPoint("TOPLEFT", 10, -110)
     ce.grpUnit.notMoving = newCheck(ce.grpUnit, "Not Moving")
-    ce.grpUnit.notMoving:SetPoint("TOPLEFT", 120, -120)
+    ce.grpUnit.notMoving:SetPoint("TOPLEFT", 120, -110)
     
-    -- Group type dropdown
+    -- Group type dropdown (with more spacing)
     ce.grpUnit.groupType = newDropdown(ce.grpUnit, 100, "Group Type")
-    ce.grpUnit.groupType:SetPoint("TOPLEFT", 10, -160)
+    ce.grpUnit.groupType:SetPoint("TOPLEFT", 10, -145)
     
     -- Form checkbox and dropdown
     ce.grpUnit.checkForm = newCheck(ce.grpUnit, "Check Form")
@@ -967,7 +972,17 @@ function UI:EditCondition(idx)
             if duration and duration > 1.5 then cd = (start + duration) - GetTime() end
             if cd < 0 then cd = 0 end
             local chg = d.id and (select(1, GetSpellCharges(d.id)) or 0) or "-"
-            infoTxt = string.format("%s  CD:%.1f  Chg:%s", spellName, cd, chg)
+            
+            -- Get spell range if available
+            local rangeInfo = ""
+            if d.id then
+                local minRange, maxRange = GetSpellRange(d.id)
+                if maxRange then
+                    rangeInfo = string.format("  Range:%d", maxRange)
+                end
+            end
+            
+            infoTxt = string.format("%s  CD:%.1f  Chg:%s%s", spellName, cd, chg, rangeInfo)
         end
         ce.grpSpell.info:SetText(infoTxt)
 
