@@ -14,7 +14,7 @@ DEFAULT_CONFIG = {
     "window_x": 50,
     "window_y": 50,
     "toggle_key": "`",
-    "toggle_vk": 0,
+    "toggle_vk": 192,  # 0xC0 - grave/tilde key
 }
 
 def load():

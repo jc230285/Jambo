@@ -676,8 +676,9 @@ class Overlay(tk.Tk):
         vk = 0
         prev_vk = None
         # Short list of candidate VKs to check if configured VK doesn't respond
-        # Only grave/tilde key variants - excludes 96 (0x60) which is NUMPAD0
-        CANDIDATE_VKS = [223, 0xC0, 192, 222, 0xBA, 0xDF, ord('`'), ord("'") if ord("'") < 256 else None]
+        # Only grave/tilde key variants (192=0xC0 is the primary one)
+        # Excludes: 96=0x60 (NUMPAD0), 39=0x27 (RIGHT ARROW), etc.
+        CANDIDATE_VKS = [192, 0xC0]  # Just the grave key, no other candidates
         CANDIDATE_VKS = [v for idx, v in enumerate(CANDIDATE_VKS) if v and v not in CANDIDATE_VKS[:idx]]
         # Debounce map - count how many consecutive polls found the candidate pressed
         detection_counters = {cv: 0 for cv in CANDIDATE_VKS}
@@ -893,6 +894,8 @@ class Overlay(tk.Tk):
         try:
             # Handle toggle key (grave/backtick) press for toggling ability and pause targeting
             try:
+                # Reload toggle_vk from config in case it was updated
+                self.toggle_vk = int(self.config_data.get('toggle_vk', 192) or 192)
                 if self.toggle_vk:
                     cur_state = win32api.GetAsyncKeyState(self.toggle_vk) & 0x8000
                     # Rising edge - toggle ability
