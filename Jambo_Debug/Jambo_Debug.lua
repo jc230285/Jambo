@@ -28,18 +28,26 @@ title:SetText("Jambo Range Debug")
 local closeBtn = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
 closeBtn:SetPoint("TOPRIGHT", -5, -5)
 
--- Content frame with scroll
-local content = CreateFrame("Frame", nil, frame)
-content:SetPoint("TOPLEFT", 10, -40)
-content:SetPoint("BOTTOMRIGHT", -10, 10)
+-- Scroll frame for text
+local scrollFrame = CreateFrame("ScrollFrame", "JamboDebugScrollFrame", frame, "UIPanelScrollFrameTemplate")
+scrollFrame:SetPoint("TOPLEFT", 10, -40)
+scrollFrame:SetPoint("BOTTOMRIGHT", -30, 10)
 
--- Info text
-local info = content:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-info:SetPoint("TOPLEFT", 0, 0)
-info:SetPoint("TOPRIGHT", 0, 0)
-info:SetJustifyH("LEFT")
-info:SetJustifyV("TOP")
-info:SetSpacing(2)
+-- Content frame inside scroll
+local content = CreateFrame("Frame", nil, scrollFrame)
+content:SetSize(360, 1)
+scrollFrame:SetScrollChild(content)
+
+-- Info text (EditBox for copyable text)
+local info = CreateFrame("EditBox", nil, content)
+info:SetPoint("TOPLEFT", 5, 0)
+info:SetPoint("TOPRIGHT", -5, 0)
+info:SetFont("Fonts\\FRIZQT__.TTF", 11)
+info:SetMultiLine(true)
+info:SetAutoFocus(false)
+info:SetMaxLetters(0)
+info:EnableMouse(true)
+info:SetScript("OnEscapePressed", function() info:ClearFocus() end)
 
 -- Test spell data (Fire Blast)
 local TEST_SPELL_NAME = "Fire Blast"
@@ -48,7 +56,9 @@ local TEST_SPELL_ID = 2136
 -- Update function
 local function UpdateDebugInfo()
     if not UnitExists("target") then
-        info:SetText("No target selected\n\nTarget an enemy to see range data.")
+        local noTargetText = "No target selected\n\nTarget an enemy to see range data."
+        info:SetText(noTargetText)
+        info:SetHeight(info:GetStringHeight() + 20)
         return
     end
     
@@ -132,7 +142,17 @@ local function UpdateDebugInfo()
     -- Range check methods
     table.insert(lines, "|cff00ff00=== RANGE CHECK METHODS ===|r")
     
-    -- Method 1: IsActionInRange (requires spell on action bar)
+    -- Method 1: ActionHasRange
+    if #foundActions > 0 then
+        for _, action in ipairs(foundActions) do
+            local hasRange = ActionHasRange(action.slot)
+            table.insert(lines, "ActionHasRange(" .. action.slot .. "): " .. tostring(hasRange))
+        end
+    else
+        table.insert(lines, "ActionHasRange: |cffff0000N/A (no action bar slot)|r")
+    end
+    
+    -- Method 2: IsActionInRange (requires spell on action bar)
     if #foundActions > 0 then
         for _, action in ipairs(foundActions) do
             local inRange = IsActionInRange(action.slot)
@@ -146,7 +166,7 @@ local function UpdateDebugInfo()
         table.insert(lines, "IsActionInRange: |cffff0000N/A (no action bar slot)|r")
     end
     
-    -- Method 2: IsActionInRange with unit parameter
+    -- Method 3: IsActionInRange with unit parameter
     if #foundActions > 0 then
         for _, action in ipairs(foundActions) do
             local inRange = IsActionInRange(action.slot, "target")
@@ -160,7 +180,7 @@ local function UpdateDebugInfo()
         table.insert(lines, "IsActionInRange(slot, 'target'): |cffff0000N/A|r")
     end
     
-    -- Method 3: CheckInteractDistance (various distances)
+    -- Method 4: CheckInteractDistance (various distances)
     table.insert(lines, "")
     table.insert(lines, "CheckInteractDistance:")
     local distChecks = {
@@ -175,12 +195,23 @@ local function UpdateDebugInfo()
         table.insert(lines, "  " .. check.desc .. ": " .. resultStr)
     end
     
-    -- Method 4: UnitInRange (party/raid only in Classic)
+    -- Method 5: Manual distance checks using CheckInteractDistance
+    table.insert(lines, "")
+    table.insert(lines, "Distance Estimates:")
+    if CheckInteractDistance("target", 3) then
+        table.insert(lines, "  |cff00ff00<= 10 yards|r (Duel range)")
+    elseif CheckInteractDistance("target", 4) then
+        table.insert(lines, "  |cffffff00<= 28 yards|r (Follow range)")
+    else
+        table.insert(lines, "  |cffff0000> 28 yards|r (Out of follow range)")
+    end
+    
+    -- Method 6: UnitInRange (party/raid only in Classic)
     table.insert(lines, "")
     local inRange = UnitInRange("target")
     table.insert(lines, "UnitInRange('target'): " .. tostring(inRange) .. " (party/raid only)")
     
-    -- Method 5: Spell usability
+    -- Method 7: Spell usability
     table.insert(lines, "")
     table.insert(lines, "|cff00ff00=== SPELL USABILITY ===|r")
     local usable, noMana = IsUsableSpell(TEST_SPELL_NAME)
@@ -193,7 +224,7 @@ local function UpdateDebugInfo()
         table.insert(lines, "No Mana (action): " .. tostring(noManaAction))
     end
     
-    -- Method 6: Spell cooldown
+    -- Method 8: Spell cooldown
     table.insert(lines, "")
     local start, duration = GetSpellCooldown(TEST_SPELL_NAME, BOOKTYPE_SPELL)
     if start then
@@ -215,8 +246,12 @@ local function UpdateDebugInfo()
     table.insert(lines, "4. Watch IsActionInRange values")
     table.insert(lines, "")
     table.insert(lines, "Expected Fire Blast range: 20 yards")
+    table.insert(lines, "")
+    table.insert(lines, "|cffaaaaaa(Click text to select/copy)|r")
     
-    info:SetText(table.concat(lines, "\n"))
+    local text = table.concat(lines, "\n")
+    info:SetText(text)
+    info:SetHeight(info:GetStringHeight() + 20)
 end
 
 -- Update every frame
