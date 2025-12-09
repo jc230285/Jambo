@@ -1,0 +1,7 @@
+## Interface: 11503
+## Title: Jambo Debug
+## Notes: Debug frame for range checking and unit data
+## Author: Jambo
+## Version: 1.0.0
+
+Jambo_Debug.lua
