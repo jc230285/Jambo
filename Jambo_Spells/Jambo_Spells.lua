@@ -100,14 +100,16 @@ f:SetScript("OnEvent", function(_, event, arg1)
         
     elseif event == "BAG_UPDATE" then
         if not InCombatLockdown() and not J.bagTimer then
-            -- DEBUG PRINT
-            print("|cff00ccff[Jambo]|r Bag Update Detected - Scheduling Scan...")
-            J.bagTimer = C_Timer.NewTimer(2.0, function()
-                print("|cff00ccff[Jambo]|r Executing Scheduled Scan...")
-                if J.ScanBagsForMacros then J:ScanBagsForMacros() end
-                if J.FullScan then J:FullScan() end 
-                J.bagTimer = nil
-            end)
+            -- Throttle: only scan if last scan was more than 2 minutes ago
+            local now = GetTime()
+            if not J.lastBagScanTime or (now - J.lastBagScanTime) >= 120 then
+                J.lastBagScanTime = now
+                J.bagTimer = C_Timer.NewTimer(2.0, function()
+                    if J.ScanBagsForMacros then J:ScanBagsForMacros() end
+                    if J.FullScan then J:FullScan() end 
+                    J.bagTimer = nil
+                end)
+            end
         end
 
     elseif event == "ACTIONBAR_SLOT_CHANGED" or event == "LEARNED_SPELL_IN_TAB" then
@@ -135,8 +137,15 @@ f:SetScript("OnEvent", function(_, event, arg1)
         -- the full scan to avoid running it repeatedly while multiple items are
         -- arriving.
         local itemID = tonumber(arg1)
-        if J.ScanBagsForMacros then J:ScanBagsForMacros() end
         if itemID and J.UpdateItemIcons then J:UpdateItemIcons(itemID) end
+        -- Throttle macro scan: only run if not already scheduled
+        if not J.itemInfoMacroTimer then
+            J.itemInfoMacroTimer = C_Timer.NewTimer(1.0, function()
+                if J.ScanBagsForMacros then J:ScanBagsForMacros() end
+                J.itemInfoMacroTimer = nil
+            end)
+        end
+        -- Throttle full scan
         if not J.itemInfoTimer then
             J.itemInfoTimer = C_Timer.NewTimer(0.5, function()
                 if J.FullScan then J:FullScan() end

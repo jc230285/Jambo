@@ -71,12 +71,6 @@ function J:ScanBagsForMacros()
     table.sort(scrolls, sortLvl)
     table.sort(bandages, sortLvl)
     
-    -- Debug Report
-    if foundCount > 0 then
-        print(string.format("|cff00ff00[Jambo]|r Scan: %d Food, %d Drink, %d HealPot, %d ManaPot, %d Scroll", 
-            #food, #water, #potions.heal, #potions.mana, #scrolls))
-    end
-
     -- Update Macros
     if #potions.heal > 0 then
         local itemInfo = potions.heal[1]
