@@ -676,7 +676,8 @@ class Overlay(tk.Tk):
         vk = 0
         prev_vk = None
         # Short list of candidate VKs to check if configured VK doesn't respond
-        CANDIDATE_VKS = [223, 0xC0, 192, 222, 0xBA, 0xDF, ord('`'), 96, ord("'") if ord("'") < 256 else None]
+        # Only grave/tilde key variants - excludes 96 (0x60) which is NUMPAD0
+        CANDIDATE_VKS = [223, 0xC0, 192, 222, 0xBA, 0xDF, ord('`'), ord("'") if ord("'") < 256 else None]
         CANDIDATE_VKS = [v for idx, v in enumerate(CANDIDATE_VKS) if v and v not in CANDIDATE_VKS[:idx]]
         # Debounce map - count how many consecutive polls found the candidate pressed
         detection_counters = {cv: 0 for cv in CANDIDATE_VKS}
