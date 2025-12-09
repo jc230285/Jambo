@@ -95,7 +95,7 @@ ns.guideData = {
         { min=150, max=225, type="LEARN", action="LEARN", text="Train Expert Fishing (visit a Fishing trainer)", targetSkill=225, levelReq=20 },
         { min=150, max=225, type="GATHER", text="Collect Raw Bristle Whisker Catfish", item=6308, target=150, tools={ 6256 }, targetSkill=225, zone="Ashenvale / Stonetalon" },
         { min=225, max=300, type="LEARN", action="LEARN", text="Train Artisan Fishing (visit a Fishing trainer)", targetSkill=300, levelReq=35 },
-        { min=225, max=300, type="GATHER", text="Fish in Feralas/Tanaris", tools={ 6256 }, targetSkill=300, zone="Feralas / Tanaris" },
+        { min=225, max=300, type="GATHER", text="Fish in Feralas/Tanaris to level", tools={ 6256 }, targetSkill=300, zone="Feralas / Tanaris" },
     },
     Alchemy = {
         { min=1, max=50, type="LEARN", action="LEARN", text="Train Apprentice Alchemy (visit an Alchemy trainer)", targetSkill=50 },

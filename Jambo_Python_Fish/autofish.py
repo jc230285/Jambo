@@ -261,21 +261,25 @@ class FishingBotThread(threading.Thread):
         img = self.capture_zone()
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         
-        # Much stricter color detection focused on actual bobber colors
-        # 1. Red/Orange fin (top) - vibrant red/orange only
-        red_lower = np.array([0, 100, 100])  # Higher saturation and value
-        red_upper = np.array([15, 255, 255])
+        # Detect only vibrant bobber colors (not dull water)
+        # Based on WoW bobbers: bright red fin, bright blue/teal body, white/tan float
+        
+        # 1. Red fin - vibrant red/orange (hue 0-10 is red)
+        # Must have high saturation (>120) and brightness (>100)
+        red_lower = np.array([0, 120, 100])
+        red_upper = np.array([10, 255, 255])
         red_mask = cv2.inRange(hsv, red_lower, red_upper)
         
-        # 2. Blue body - NOT the water blue (water is desaturated)
-        # Bobber blue is more saturated/vibrant
-        blue_lower = np.array([100, 80, 80])  # Much higher saturation
-        blue_upper = np.array([130, 255, 255])
+        # 2. Blue/Teal body - vibrant cyan/blue (NOT water blue!)
+        # Water is hue ~100-110 with saturation 40-70
+        # Bobber is hue ~100-110 with saturation >100
+        blue_lower = np.array([90, 100, 100])
+        blue_upper = np.array([110, 255, 255])
         blue_mask = cv2.inRange(hsv, blue_lower, blue_upper)
         
-        # 3. Cork/float - bright, low saturation (white/beige)
-        cork_lower = np.array([0, 0, 150])  # Bright colors only
-        cork_upper = np.array([180, 80, 255])  # Low saturation
+        # 3. White/Tan float - bright colors with low saturation
+        cork_lower = np.array([0, 0, 180])
+        cork_upper = np.array([180, 60, 255])
         cork_mask = cv2.inRange(hsv, cork_lower, cork_upper)
         
         # Combine all masks
@@ -422,7 +426,7 @@ class FishingBotThread(threading.Thread):
     def _is_bobber_still_at(self, x, y, check_radius=30):
         """Check a small region around absolute screen coords (x,y) for bobber-like color/texture.
         Returns True ONLY if bobber is confidently detected in that region.
-        Uses strict multi-color detection to avoid false positives.
+        Uses strict saturation thresholds to avoid water false positives.
         """
         try:
             left = int(x - check_radius // 2)
@@ -434,21 +438,19 @@ class FishingBotThread(threading.Thread):
             bgr = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
             hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
             
-            # Strict color matching - vibrant colors only
-            red_lower = np.array([0, 100, 100])
-            red_upper = np.array([15, 255, 255])
+            # Same strict thresholds as find_bobber
+            red_lower = np.array([0, 120, 100])
+            red_upper = np.array([10, 255, 255])
             red_mask = cv2.inRange(hsv, red_lower, red_upper)
             red_pixels = np.sum(red_mask > 0)
             
-            # Blue body - saturated blue, not water
-            blue_lower = np.array([100, 80, 80])
-            blue_upper = np.array([130, 255, 255])
+            blue_lower = np.array([90, 100, 100])
+            blue_upper = np.array([110, 255, 255])
             blue_mask = cv2.inRange(hsv, blue_lower, blue_upper)
             blue_pixels = np.sum(blue_mask > 0)
             
-            # Cork - bright, low saturation
-            cork_lower = np.array([0, 0, 150])
-            cork_upper = np.array([180, 80, 255])
+            cork_lower = np.array([0, 0, 180])
+            cork_upper = np.array([180, 60, 255])
             cork_mask = cv2.inRange(hsv, cork_lower, cork_upper)
             cork_pixels = np.sum(cork_mask > 0)
             
