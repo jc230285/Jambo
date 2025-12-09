@@ -76,10 +76,36 @@ if %MAJOR% equ 3 if %MINOR% lss 10 (
 echo.
 
 REM ============================================
-REM Step 2: Upgrade pip
+REM Step 2: Check pip availability
 REM ============================================
-echo [2/5] Upgrading pip to latest version...
-"%PYTHON_EXE%" -m pip install --upgrade pip >nul 2>&1
+echo [2/6] Checking pip availability...
+"%PYTHON_EXE%" -m pip --version >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [ERROR] pip is not available!
+    echo.
+    echo Attempting to install pip using ensurepip...
+    "%PYTHON_EXE%" -m ensurepip --upgrade
+    if !errorlevel! neq 0 (
+        echo [ERROR] Failed to install pip!
+        echo.
+        echo Please install pip manually:
+        echo 1. Download get-pip.py from https://bootstrap.pypa.io/get-pip.py
+        echo 2. Run: "%PYTHON_EXE%" get-pip.py
+        echo.
+        pause
+        exit /b 1
+    )
+    echo [OK] pip installed successfully
+) else (
+    echo [OK] pip is available
+)
+echo.
+
+REM ============================================
+REM Step 3: Upgrade pip
+REM ============================================
+echo [3/6] Upgrading pip to latest version...
+"%PYTHON_EXE%" -m pip install --upgrade pip --no-warn-script-location
 if %errorlevel% neq 0 (
     echo [WARNING] Could not upgrade pip (continuing anyway)
 ) else (
@@ -88,9 +114,9 @@ if %errorlevel% neq 0 (
 echo.
 
 REM ============================================
-REM Step 3: Check requirements.txt
+REM Step 4: Check requirements.txt
 REM ============================================
-echo [3/5] Checking requirements.txt...
+echo [4/6] Checking requirements.txt...
 if not exist "%~dp0requirements.txt" (
     echo [ERROR] requirements.txt not found!
     echo Expected location: %~dp0requirements.txt
@@ -102,13 +128,13 @@ echo [OK] requirements.txt found
 echo.
 
 REM ============================================
-REM Step 4: Install/Update dependencies
+REM Step 5: Install/Update dependencies
 REM ============================================
-echo [4/5] Installing/updating required packages...
+echo [5/6] Installing/updating required packages...
 echo This may take a moment...
 echo.
 
-"%PYTHON_EXE%" -m pip install --upgrade -r "%~dp0requirements.txt"
+"%PYTHON_EXE%" -m pip install --upgrade -r "%~dp0requirements.txt" --no-warn-script-location
 if %errorlevel% neq 0 (
     echo.
     echo [ERROR] Failed to install required packages!
@@ -127,9 +153,9 @@ echo [OK] All packages installed/updated successfully
 echo.
 
 REM ============================================
-REM Step 5: Verify critical modules
+REM Step 6: Verify critical modules
 REM ============================================
-echo [5/5] Verifying critical modules...
+echo [6/6] Verifying critical modules...
 
 set "MISSING_MODULES="
 
