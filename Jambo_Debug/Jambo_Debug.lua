@@ -52,47 +52,52 @@ info:SetScript("OnEscapePressed", function() info:ClearFocus() end)
 -- Test spell data - one spell per range breakpoint per class
 -- Excludes: Point-blank AoE spells (Frost Nova, Arcane Explosion, etc.)
 local TEST_SPELLS = {
-    -- Melee range test
-    {name = "Attack", range = 5, class = "ALL"},
-    
-    -- Mage
+    -- Mage (no melee)
     {name = "Fire Blast", range = 20, class = "MAGE"},
     {name = "Frostbolt", range = 30, class = "MAGE"},
     {name = "Fireball", range = 35, class = "MAGE"},
     {name = "Scorch", range = 30, class = "MAGE"},
     
-    -- Warlock
+    -- Warlock (no melee)
     {name = "Corruption", range = 30, class = "WARLOCK"},
     {name = "Shadow Bolt", range = 30, class = "WARLOCK"},
     {name = "Immolate", range = 30, class = "WARLOCK"},
     
-    -- Priest
+    -- Priest (no melee)
     {name = "Shadow Word: Pain", range = 30, class = "PRIEST"},
     {name = "Mind Blast", range = 30, class = "PRIEST"},
     {name = "Smite", range = 30, class = "PRIEST"},
     
     -- Druid
+    {name = "Claw", range = 5, class = "DRUID"},
     {name = "Wrath", range = 30, class = "DRUID"},
     {name = "Moonfire", range = 30, class = "DRUID"},
     {name = "Starfire", range = 30, class = "DRUID"},
     
     -- Shaman
+    {name = "Primal Strike", range = 5, class = "SHAMAN"},
     {name = "Lightning Bolt", range = 30, class = "SHAMAN"},
     {name = "Earth Shock", range = 20, class = "SHAMAN"},
     {name = "Flame Shock", range = 20, class = "SHAMAN"},
     
     -- Hunter
+    {name = "Raptor Strike", range = 5, class = "HUNTER"},
     {name = "Arcane Shot", range = 35, class = "HUNTER"},
     {name = "Serpent Sting", range = 35, class = "HUNTER"},
     {name = "Steady Shot", range = 35, class = "HUNTER"},
     
     -- Paladin
+    {name = "Crusader Strike", range = 5, class = "PALADIN"},
     {name = "Judgement", range = 10, class = "PALADIN"},
     {name = "Exorcism", range = 30, class = "PALADIN"},
     
     -- Warrior
+    {name = "Heroic Strike", range = 5, class = "WARRIOR"},
     {name = "Charge", range = 25, class = "WARRIOR"},
     {name = "Throw", range = 30, class = "WARRIOR"},
+    
+    -- Rogue
+    {name = "Sinister Strike", range = 5, class = "ROGUE"},
 }
 local TEST_SPELL_NAME = "Fire Blast"
 local TEST_SPELL_ID = 2136
@@ -435,7 +440,8 @@ local function UpdateDebugInfo()
     table.insert(lines, "")
     table.insert(lines, "Recommended Code:")
     table.insert(lines, "|cffaaaaaa-- For melee range (5 yards)|r")
-    table.insert(lines, "|cffaaaaaalocal inMelee = IsSpellInRange('Attack', 'target') == 1|r")
+    table.insert(lines, "|cffaaaaaalocal in5 = IsSpellInRange('Heroic Strike', 'target') == 1|r")
+    table.insert(lines, "|cffaaaaaa-- or use CheckInteractDistance(target, 3) for 10y|r")
     table.insert(lines, "")
     table.insert(lines, "|cffaaaaaa-- For 20-yard spells (Fire Blast)|r")
     table.insert(lines, "|cffaaaaaalocal in20 = IsSpellInRange('Fire Blast', 'target') == 1|r")
